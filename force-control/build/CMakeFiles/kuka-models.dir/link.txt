@@ -1,0 +1,2 @@
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ar qc libkuka-models.a  CMakeFiles/kuka-models.dir/src_test/KukaModel.cpp.o CMakeFiles/kuka-models.dir/src_test/models.cpp.o CMakeFiles/kuka-models.dir/analytical/RobotAnalytical.cpp.o CMakeFiles/kuka-models.dir/analytical/KUKAAnalyticalSolutions.cpp.o
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ranlib libkuka-models.a
