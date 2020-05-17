@@ -7,4 +7,7 @@ By default eigen in this repo is used. No need to be installed.
 
 # Install (standalone)
 
-- Make a build folder 'mkdir build'
+- Make a build folder `mkdir build && cd build`
+- `cmake ..`
+- `make`
+- Run `./ddp_contact`
