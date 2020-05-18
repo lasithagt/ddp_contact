@@ -62,8 +62,9 @@ void df(const Eigen::Matrix3d& mass_matrix_cart, const Eigen::Vector3d& position
    Eigen::Vector3d spring_dir = surfaceNormal(force_current);
 
    // the force component in the direction of spring_dir, projection to spring direction
-   Eigen::Vector3d force_z        = (force_current.dot(spring_dir) / spring_dir.norm()) * spring_dir;
-   Eigen::Vector3d velocity_z     = (velocity.dot(spring_dir) / velocity.norm()) * velocity;
+   // Eigen::Vector3d force_z        = (force_current.dot(spring_dir) / spring_dir.norm()) * spring_dir;
+   Eigen::Vector3d force_z        = (force_current.dot(spring_dir)) * spring_dir;
+   Eigen::Vector3d velocity_z     = (velocity.dot(spring_dir))  * velocity;
    Eigen::Vector3d acceleration_z = (acceleration.dot(spring_dir) / acceleration.norm()) * acceleration;
 
    // surface deformation resulting from force_z, dx in the direction of spring_dir. Using the quasi static model. 
@@ -79,8 +80,9 @@ void df(const Eigen::Matrix3d& mass_matrix_cart, const Eigen::Vector3d& position
 
    /* -------------- Frictional force calculation -------------- */
    // frictional force
-   Eigen::Vector3d F_f_dot = cp_.mu * K * velocity_z + 3 * cp_.mu * (2 * cp_.nu - 1) * (K * d * velocity_z  + force_z.norm() * velocity_z) / (10 * cp_.R);// + cp_.Kd * acceleration_z;
+   Eigen::Vector3d F_f_dot = cp_.mu * K * velocity_z + 3 * cp_.mu * (2 * cp_.nu - 1) * (K * d * velocity_z  + force_z.norm() * velocity_z) / (10 * cp_.R);  // + cp_.Kd * acceleration_z;
      
+
    /* -------------- End - Frictional force calculation -------------- */
 
 
@@ -99,6 +101,10 @@ void df(const Eigen::Matrix3d& mass_matrix_cart, const Eigen::Vector3d& position
 /* implement a way to estimate the surface normal from state data. */
 inline Eigen::Vector3d surfaceNormal(const Eigen::Vector3d& force)
 {
+   if (force.norm() < 0.1)
+   {
+      return (0*force);
+   }
    return force.normalized();
 }
 
