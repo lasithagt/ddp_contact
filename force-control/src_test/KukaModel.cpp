@@ -5,6 +5,13 @@
 KUKAModelKDL::KUKAModelKDL(const KDL::Chain& robotChain, const KUKAModelKDLInternalData& robotParams) : robotChain_(robotChain), robotParams_(robotParams) 
 {
     dynamicsChain_ = new KDL::ChainDynParam(robotChain_, KDL::Vector(0,0,-9.8));
+
+    // IK solver using Levenberg-Marquardt method
+    Eigen::Matrix<double, 6, 1> _L;
+    _L << 1, 1, 1, 1, 1, 1;
+    double _eps = 1E-5;
+    double _eps_joints = 1E-15;
+    IKSolver = std::unique_ptr<KDL::ChainIkSolverPos_LMA>(new KDL::ChainIkSolverPos_LMA(robotChain, _L, _eps, 500, _eps_joints));
 } 
 
 KUKAModelKDL::~KUKAModelKDL()
@@ -137,9 +144,13 @@ void KUKAModelKDL::getSpatialJacobianDot(double* q, double* qd, Eigen::MatrixXd&
     jacobianDot = std::move(jacobian_.data);
 }
 
-void KUKAModelKDL::ik()
+void KUKAModelKDL::ik(const std::vector<Eigen::MatrixXd>& poses, std::vector<Eigen::VectorXd>& qs)
 {
-    
+    // KDL::frame f_;
+    // for (int i = 0;i < poses.size(); i++)
+    // {
+    //     IKSolver->CartToJnt(const KDL::JntArray &q_init, poses.at(i).data, q_out);   
+    // }
 }
 
 

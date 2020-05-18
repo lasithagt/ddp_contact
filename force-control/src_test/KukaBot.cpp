@@ -1,6 +1,7 @@
 
 #include "KukaModel.h"
 #include "AdmittanceForceController.h"
+#include "SoftContactModel.hpp"
 #include "RobotAnalytical.h"
 
 #include <stdio.h>
@@ -67,9 +68,9 @@ int main(int argc, char* argv[])
 	// kukaRobot->getForwardDynamics(q, qd, force_ext, qdd);
 	// kukaRobot->getSpatialJacobian(q, jacobian);
 	// kukaRobot->getSpatialJacobianDot(q, qd, jacobian);
-	// kukaRobot->getForwardKinematics(q, qd, qdd_, poseM, poseP, vel, accel, false);
+	kukaRobot->getForwardKinematics(q, qd, qdd_, poseM, poseP, vel, accel, false);
 	// kukaAnalytical->getForwardKinematics(q, qd, qdd_, poseM, poseP, vel, accel, false);
-	kukaAnalytical->getSpatialJacobian(q, jacobian);
+	// kukaAnalytical->getSpatialJacobian(q, jacobian);
 
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	// milliseconds time_span = duration_cast<milliseconds>(t2 - t1);
@@ -103,27 +104,50 @@ int main(int argc, char* argv[])
 
 	// double* force_current = new double[3];
 	Eigen::Vector3d force_current(0,0,0);
+	Eigen::Vector3d force_desired(0,0,5);
+
 	double gains[3] = {1,1,1};
-	double update_q[7] = {0,0,0,0,0,0,0};
+	Eigen::VectorXd q_curr(7);
+	q_curr << 0,0,0,0,0,0,0;
+	Eigen::VectorXd update_q(7);
 	Eigen::Vector3d position_ref(0,0,1.1); 
 	Eigen::Vector3d orientation_ref(0,0,0);
-	Eigen::Vector4d poseQ(0,0,0,1);
+	Eigen::Vector3d poseQ(0,0,0);
 
-	// KDL::Rotation rot;
-	// memcpy(rot.data, poseM.data(), 9 * sizeof(double));
-
-	// double a;
-	// double b;
-	// double c;
-	// double w;
-
-	// rot.GetQuaternion(&a, &b, &c, &w);
 
 	// std::cout << w << std::endl;
 	Eigen::VectorXd q_desired(7);
+	q_desired.setZero();
 
 	ForceControl::AdmittanceForceController AdmittanceControl = ForceControl::AdmittanceForceController(cp_FC, dt);
-	AdmittanceControl.update(*kukaRobot, q, poseP, poseQ, q_desired, force_current, gains, update_q);
+	AdmittanceControl.update(*kukaRobot, q_curr, poseP, poseQ, q_desired, force_current, force_desired, gains, update_q);
+
+	std::cout << update_q.transpose().format(CleanFmt) << std::endl;
+
+
+	/* Test Soft Contact Model */
+	ContactModel::ContactParams cp_;
+	cp_.E = 1000;
+	cp_.mu = 0.5;
+	cp_.nu = 0.4;
+	cp_.R  = 0.005;
+	cp_.R_path = 1000;
+	cp_.Kd = 10;
+	ContactModel::SoftContactModel contactModel = ContactModel::SoftContactModel(cp_);
+
+	Eigen::Matrix3d mass_matrix_cart; 
+	mass_matrix_cart << 1, 0, 0, 0, 1, 0, 0, 0, 1;
+
+	Eigen::Vector3d position(1, 1, 0); 
+	Eigen::Vector3d orientation(1, 1, 0); 
+	Eigen::Vector3d velocity(0, 0, 0); 
+	Eigen::Vector3d acceleration(1, 1, 0); 
+	// Eigen::Vector3d force_current(0, 0, 10); 
+	Eigen::Vector3d force_dot;
+
+	contactModel.df(mass_matrix_cart, position, orientation, velocity, acceleration, force_current, force_dot);
+	std::cout << force_dot.format(CleanFmt) << std::endl;
+
 
 	delete[] q;
 	delete[] qd;
