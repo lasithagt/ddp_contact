@@ -48,7 +48,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 
 include_directories(SYSTEM ${EIGEN_INCLUDE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${OROCOS_KDL_INCLUDE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/contact_model ${OROCOS_KDL_INCLUDE_DIR})
 
 #add_library( INTERFACE)
 #target_include_directories(ddp INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
