@@ -18,6 +18,9 @@
 #include <kdl/chainfksolvervel_recursive.hpp>
 #include <kdl/chainjnttojacdotsolver.hpp>
 
+#include <kdl/chainiksolverpos_lma.hpp>
+
+
 #include <memory>
 #include <string.h>
 
@@ -65,7 +68,7 @@ public:
     void getSpatialJacobianDot(double* q, double* qd, Eigen::MatrixXd& jacobianDot);
 
 
-    void ik();
+    void ik(const std::vector<Eigen::MatrixXd>& poses, std::vector<Eigen::VectorXd>& qs);
 
     KUKAModelKDLInternalData robotParams_;
 
@@ -84,6 +87,8 @@ private:
     Eigen::Matrix<double, 7, 7> Kv_;
     KDL::ChainDynParam* dynamicsChain_;
     KDL::Chain robotChain_;
+
+    std::unique_ptr<KDL::ChainIkSolverPos_LMA> IKSolver;
 
 };
 

@@ -27,13 +27,13 @@ class AdmittanceForceController
 		void test();
 
 		// void update(const class RobotAbstract& robot, const Eigen::Vector3d& poseP);
-		void update(class KUKAModelKDL& robot, double* q, const Eigen::Vector3d& poseP, const Eigen::Vector4d& poseQ, const Eigen::VectorXd& q_desired, const Eigen::Vector3d& force_current, double* gains, double* update_q);
+		void update(class KUKAModelKDL& robot, const Eigen::VectorXd& q, const Eigen::Vector3d& poseP, const Eigen::Vector3d& poseQ, const Eigen::VectorXd& q_desired, const Eigen::Vector3d& force_current, const Eigen::Vector3d& force_desired, double* gains, Eigen::VectorXd& update_q);
 		
 		void EstimateSurfaceNormal(const Eigen::VectorXd& force_current, Eigen::Vector3d& surface_normal);
 		
 		bool IsContact(const Eigen::Vector3d& force);
 		
-		void JacobianInvSolve(class KUKAModelKDL& robot, double* q, const Eigen::VectorXd& dp, Eigen::VectorXd& dq); 
+		inline Eigen::VectorXd JacobianInvSolve(class KUKAModelKDL& robot, const Eigen::VectorXd& q, const Eigen::VectorXd& dp); 
 };
 
 }
