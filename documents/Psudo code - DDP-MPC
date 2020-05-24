@@ -1,0 +1,33 @@
+Psudo code - DDP-MPC
+--------------------
+
+desired traj --> x_des[N+1]
+control      --> u[N]
+mpc_horizon  --> h
+ddp_iter_max --> iter_max_ddp
+admm_iter    --> iter_max_admm
+
+u_init_mpc[0:h-1] = gravity warm start.
+
+# pre-warm-start, for admm quick convergence
+call function DDP-ADMM(x_des[0-->h*1], u_init[0-->h-1], 20, iter_max_admm), return 
+u_init_mpc = u_optim, x_state_mpc
+
+for, i --> from 0 to N+1-h, at intervals h
+
+	x_des_mpc = x_des[h*i-->h*(i+1)]
+	u_optim, x_state_mpc = call function DDP-ADMM(x_des_mpc, u_init_mpc, iter_max_ddp, iter_max_admm), return 
+
+	# warm start
+	u_init_mpc[0] = u_optim[h-1] 
+	u_init_mpc[1:h-1] = gravity_warm_start
+
+	# record
+	X[h*i-->h(i*1)] = x_state_mpc
+	U[]
+
+end for
+
+
+
+
