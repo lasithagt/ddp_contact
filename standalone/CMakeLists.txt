@@ -50,6 +50,12 @@ set(SOURCES_DDP ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver.cpp ${CMAKE_CURRENT_S
 target_link_libraries(ddp-solver PUBLIC kuka-models)
 target_sources(ddp-solver PUBLIC ${SOURCES_DDP})
 
+add_library(ddp-admm-solver STATIC)
+target_include_directories(ddp-admm-solver PUBLIC include)
+set(SOURCES_DDP_ADMM ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver_track.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/cost_function_kuka_arm_track.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/kuka_arm_track.cc)
+target_link_libraries(ddp-admm-solver PUBLIC kuka-models)
+target_sources(ddp-admm-solver PUBLIC ${SOURCES_DDP_ADMM})
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
@@ -57,6 +63,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 add_executable(ddp-contact src/runddp_softcontact.cc)
 target_include_directories(ddp-contact PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ddp-contact orocos-kdl ddp-solver kuka-models)
+
+
+add_executable(ddp-admm-contact src/runADMM_softcontact.cc)
+target_include_directories(ddp-admm-contact PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(ddp-admm-contact orocos-kdl ddp-admm-solver kuka-models)
 
 
 
