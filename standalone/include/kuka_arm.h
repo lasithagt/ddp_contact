@@ -54,12 +54,8 @@ public:
     KukaArm(double& iiwa_dt, unsigned int& iiwa_N, stateVec_t& iiwa_xgoal, ContactModel::SoftContactModel& contact_model,
             std::vector<Eigen::Matrix<double,6,1> >& iiwa_fk_ref);
 
-    // KukaArm(double& iiwa_dt, unsigned int& iiwa_N, stateVec_t& iiwa_xgoal, ContactModel::SoftContactModel& contact_model,
-    //         std::unique_ptr<RigidBodyTree<double>>& totalTree_, std::unique_ptr<KUKAModelKDL>& kukaRobot, std::vector<Eigen::Matrix<double,6,1>>& iiwa_fk_ref);
-
     KukaArm(double& iiwa_dt, unsigned int& iiwa_N, stateVec_t& iiwa_xgoal, std::unique_ptr<KUKAModelKDL>& kukaRobot, ContactModel::SoftContactModel& contact_model, std::vector<Eigen::Matrix<double,6,1> >& iiwa_fk_ref);
     ~KukaArm(){};
-private:
 protected:
     // attributes
     unsigned int stateNb;
@@ -81,6 +77,7 @@ protected:
     stateR_commandC_Tens_t fuuList;
 
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     struct timeprofile
     {
         double time_period1, time_period2, time_period3, time_period4;
@@ -139,20 +136,15 @@ private:
     Eigen::Vector3d force_current;
 
     std::vector<Eigen::VectorXd> q_thread, qd_thread;
-protected:
-    // methods
+
 public:
-    scalar_t forwardkin_cost(stateVec_t x, commandVec_t u, Eigen::Matrix<double,6,1> fk_goal, 
-                                CostFunctionKukaArm*& costFunction, unsigned int last);
-    scalar_t cost_func_expre(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k, CostFunctionKukaArm*& costFunction);
-    stateVec_t finite_diff_cx(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k, CostFunctionKukaArm*& costFunction);
-    commandVec_t finite_diff_cu(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k, CostFunctionKukaArm*& costFunction);
+
     stateVec_t kuka_arm_dynamics(const stateVec_t& X, const commandVec_t& tau);
 
     void kuka_arm_dyn_cst_ilqr(const int& nargout, const stateVecTab_t& xList, const commandVecTab_t& uList, stateVecTab_t& FList, const stateVecTab_t& xList_bar, CostFunctionKukaArm*& costFunction);
     void kuka_arm_dyn_cst_min_output(const unsigned int& index_k, const double& dt, const stateVec_t& xList_curr, const commandVec_t& uList_curr,  const stateVec_t& xList_cur_bar, const bool& isUNan, stateVec_t& xList_next, CostFunctionKukaArm*& costFunction);
-    void kuka_arm_dyn_cst_udp(const int& nargout, const stateVecTab_t& xList, const commandVecTab_t& uList, stateVecTab_t& FList, CostFunctionKukaArm*& costFunction);
-    // void kuka_arm_dyn_cst_v3(const int& nargout, const stateVecTab_t& xList, const commandVecTab_t& uList, stateVecTab_t& FList, stateTensTab_t& fxxList, stateTensTab_t& fxuList, stateR_commandC_Tens_t& fuuList, CostFunctionKukaArm*& costFunction);
+    // void kuka_arm_dyn_cst_udp(const int& nargout, const stateVecTab_t& xList, const commandVecTab_t& uList, stateVecTab_t& FList, CostFunctionKukaArm*& costFunction);
+
     stateVec_t update(const int& nargout, const stateVec_t& X, const commandVec_t& U, stateMat_t& A, stateR_commandC_t& B);
     void grad(const stateVec_t& X, const commandVec_t& U, stateMat_t& A, stateR_commandC_t& B);
     void hessian(const stateVec_t& X, const commandVec_t& U, stateTens_t& fxx_p, stateR_stateC_commandD_t& fxu_p, stateR_commandC_commandD_t& fuu_p);    
@@ -164,10 +156,6 @@ public:
     commandVec_t& getUpperCommandBounds();
     stateMatTab_t& getfxList();
     stateR_commandC_tab_t& getfuList();
-private:
-protected:
-        // accessors //
-public:
 };
 
 

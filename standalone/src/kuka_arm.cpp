@@ -22,6 +22,7 @@ const char* const kIiwaUrdf =
 // iiwa_dt = time step
 // iiwa_N = number of knots
 // iiwa_xgoal = final goal in state space (7pos, 7vel)
+
 KukaArm::KukaArm(double& iiwa_dt, unsigned int& iiwa_N, stateVec_t& iiwa_xgoal,ContactModel::SoftContactModel& contact_model,std::vector<Eigen::Matrix<double,6,1> >& iiwa_fk_ref)
 {
     //#####
@@ -194,6 +195,7 @@ KukaArm::KukaArm(double& iiwa_dt, unsigned int& iiwa_N, stateVec_t& iiwa_xgoal, 
     velocity.setZero();
     accel.setZero();
     Xdot_new.setZero();
+
     // Xdot_new_thread.resize(NUMBER_OF_THREAD);
     // vd_thread.resize(NUMBER_OF_THREAD);
 
@@ -230,6 +232,7 @@ KukaArm::KukaArm(double& iiwa_dt, unsigned int& iiwa_N, stateVec_t& iiwa_xgoal, 
     initial_phase_flag_ = 1;
     q.resize(stateSize/2);
     qd.resize(stateSize/2);
+
     // q_thread.resize(NUMBER_OF_THREAD);
     // qd_thread.resize(NUMBER_OF_THREAD);
     // for(unsigned int i=0;i<NUMBER_OF_THREAD;i++){
@@ -265,11 +268,6 @@ stateVec_t KukaArm::kuka_arm_dynamics(const stateVec_t& X, const commandVec_t& t
     {
         if (SOFT_CONTACT)
         {
-            //LW
-            // q << X.head((stateSize-3)/2);
-            // qd << X.segment((stateSize-3)/2, (stateSize-3)/2);
-            // force_current << X.tail(3);
-
             q = X.head((stateSize-3)/2);
             qd = X.segment((stateSize-3)/2, (stateSize-3)/2);
             force_current = X.tail(3);
@@ -284,85 +282,8 @@ stateVec_t KukaArm::kuka_arm_dynamics(const stateVec_t& X, const commandVec_t& t
             vd_full.setZero();
             q_full.topRows((stateSize-3)/2)=q;
             qd_full.topRows((stateSize-3)/2)=qd;
-            // VectorX<double> q_0 = VectorX<double>::Zero(9);
-            // VectorX<double> qd_0 = VectorX<double>::Zero(9);
-            // VectorX<double> qd_0 = VectorX<double>::Zero(9);
 
-            //    KinematicsCache<double> cache_ = robot_thread_->doKinematics(q, qd);
-
-            /* ----------------------------- get fk kinematic ---------------------------*/ 
-            // KinematicsCache<double> cache_ = robot_thread_->CreateKinematicsCache();
-            // cache_.initialize(q_full,qd_full);
-            // robot_thread_->doKinematics(cache_, true);
-            // ---------------------------------------------------------------------------
-
-            //const RigidBodyTree<double>::BodyToWrenchMap no_external_wrenches;
-            //gettimeofday(&tbegin_period,NULL);
-
-            /* ----------------------------Mass -----------------------------------------*/
-            // MatrixX<double> M_ = robot_thread_->massMatrix(cache_); // Inertial matrix
-            // --------------------------------------------------------------------------
-
-            // cout << M_ << endl;
-            //gettimeofday(&tend_period,NULL);
-            //finalTimeProfile.time_period2 += ((double)(1000.0*(tend_period.tv_sec-tbegin_period.tv_sec)+((tend_period.tv_usec-tbegin_period.tv_usec)/1000.0)))/1000.0;
-
-            //gettimeofday(&tbegin_period,NULL);
-
-            /* ------------------------------- fxt -------------------------------------------*/
-            // drake::WrenchVector<double> tw;
-            // // tw  <<  0,0,0,0,0,100;
-            // tw  <<  force_current;         
-            // RigidBody<double> const & rb = (*robot_thread_).get_body(10); 
-            // drake::eigen_aligned_std_unordered_map< RigidBody<double> const*, drake::TwistVector<double> > f_ext;
-            // f_ext[&rb] = tw;
-            //----------------------------------------------------------------------------     
-
-            // drake::eigen_aligned_std_unordered_map<RigidBody<double> const*, drake::TwistVector<double>> f_ext;
-            //gettimeofday(&tend_period,NULL);
-            //finalTimeProfile.time_period3 += ((double)(1000.0*(tend_period.tv_sec-tbegin_period.tv_sec)+((tend_period.tv_usec-tbegin_period.tv_usec)/1000.0)))/1000.0;
-            
-            //gettimeofday(&tbegin_period,NULL);
-            
-            // VectorX<double> bias_term_ = robot_thread_->dynamicsBiasTerm(cache_, f_ext);  // Bias term: M * vd + h = tau + J^T * lambda
-            // -------------------------------------------------------------------------------------------------------------------
-            // VectorX<double> bias_term_ = robot_thread_->dynamicsBiasTerm(cache_, f_ext);  // Bias term: M * vd + h = tau + J^T * lambda
-            //-----------------------------------------------------------------------------------------------------------------------------
-            //    VectorX<double> bias_term_2 = robot_thread_->dynamicsBiasTerm(cache_, f_ext, false);
-            //gettimeofday(&tend_period,NULL);
-            //finalTimeProfile.time_period4 += ((double)(1000.0*(tend_period.tv_sec-tbegin_period.tv_sec)+((tend_period.tv_usec-tbegin_period.tv_usec)/1000.0)))/1000.0;
-
-            //=============================================
-            //Set false for doing only gravity comp
-            //     VectorX<double> gtau = robot_thread_->inverseDynamics(cache_, f_ext, qd_0, false);
-            //=============================================
-            /*-------------------------------------------------------------------------*/
-            // vd_full = M_.inverse()*(tau - bias_term_);
-            /*-------------------------------------------------------------------------*/
-            //    vd = M_.inverse()*(tau + bias_term_2 - bias_term_ );
-            //    vd = M_.inverse()*(tau - bias_term_ + gtau);
-            //    vd = M_.inverse()*(tau + gtau);
-
-            // Get derivative of contact force based on soft contact model
-                // FK to get the position and orientation of end-effector
-
-            // ----------------------------------------------------------------------------------------------------
-            // const auto &body_pose_fk = robot_thread_->CalcFramePoseInWorldFrame(
-            //                     cache_, robot_thread_->get_body(CARTESIAN_FRAME), Isometry3d::Identity());
-            // math::RotationMatrix<double> R_init(body_pose_fk.linear());
-            // math::RollPitchYaw<double> rpy_init(R_init);
-            // Eigen::Matrix<double,6,1> fk_cur;
-            // fk_cur << body_pose_fk.translation().x(),
-            //     body_pose_fk.translation().y(),
-            //     body_pose_fk.translation().z(),
-            //     rpy_init.roll_angle(),
-            //     rpy_init.pitch_angle(),
-            //     rpy_init.yaw_angle();
-            
-            // Eigen::Vector3d position_cart; 
-            // Eigen::Vector3d orientation_cart; 
-            // Eigen::Vector3d velocity_cart; 
-            // Eigen::Vector3d acceleration_cart;  
+          
             Eigen::Vector3d force_dot;
             // Eigen::Matrix3d mass_cart;
 
@@ -445,122 +366,10 @@ KukaArm::timeprofile KukaArm::getFinalTimeProfile()
     return finalTimeProfile;
 }
 
-scalar_t KukaArm::forwardkin_cost(stateVec_t x, commandVec_t u, Eigen::Matrix<double,6,1> fkgoal, 
-                                        CostFunctionKukaArm*& costFunction, unsigned int last)
-{
-    // forward dynamics here xList_curr is a vector of states
-    if (SOFT_CONTACT)
-    {
-        // ---------------------------------------------------------------------------
-        Eigen::VectorXd qq = Eigen::VectorXd((stateSize-3)/2+2);
-        Eigen::VectorXd qqd = Eigen::VectorXd((stateSize-3)/2+2);
-        qq.setZero();
-        qqd.setZero();
-        qq.topRows((stateSize-3)/2) = x.head((stateSize-3)/2);
-        qqd.topRows((stateSize-3)/2) = x.segment((stateSize-3)/2, (stateSize-3)/2);    
-
-        /*---------------------------------------*/
-        Eigen::Matrix<double,3,3> poseM;
-        Eigen::Vector3d poseP;
-        Eigen::Vector3d vel;
-        Eigen::Vector3d accel;
-
-        kukaRobot_->getForwardKinematics(qq.data(), qqd.data(), qdd.data(), poseM, poseP, vel, accel, false);
-
-        // ----------------------------------------------------
-
-        Eigen::Matrix3d m;
-        m = Eigen::AngleAxisd(poseM);
-        Eigen::Vector3d ea = m.eulerAngles(2, 1, 0); 
-
-        Eigen::Matrix<double, 6, 1> fk_current;
-        fk_current << poseP(0), poseP(1), poseP(2), ea(0), ea(1), ea(2);
-
-        // cout << "fk_cur " << fk_cur.transpose() << " fkgoal " << fkgoal.transpose() << endl;
-        // if last element, only add state cost
-
-        scalar_t c_mat_to_scalar;
-
-        if (last == 1)
-        {
-            c_mat_to_scalar = 0.5 * (fk_current.transpose() - fkgoal.transpose()) * costFunction->getT() * (fk_current - fkgoal);
-        }
-        else 
-        {
-            c_mat_to_scalar = 0.5 * u.transpose() * costFunction->getR() * u;        
-        }
-
-        std::cout << "in this function" << std::endl;
-
-        // c_mat_to_scalar.setZero();
-
-        return c_mat_to_scalar;
-    }
-
-    
-}
-
-scalar_t KukaArm::cost_func_expre(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k, CostFunctionKukaArm*& costFunction){
-    scalar_t c_mat_to_scalar;
-    unsigned int Nl = NumberofKnotPt;
-    if (index_k == Nl)
-    {
-        c_mat_to_scalar = 0.5 * (xList_k.transpose() - xList_bar_k.transpose()) * costFunction->getQf() * (xList_k - xList_bar_k);
-        // c_mat_to_scalar = 0.5*(xList_k.transpose() - xgoal.transpose()) * costFunction->getQf() * (xList_k - xgoal);
-        // c_mat_to_scalar = forwardkin_cost(xList_k, uList_k, fk_ref[index_k], costFunction, 1);
-    }
-    else
-    {
-        c_mat_to_scalar = 0.5 * (xList_k.transpose() - xList_bar_k.transpose()) * costFunction->getQ()*(xList_k - xList_bar_k);
-        // c_mat_to_scalar = 0.5*(xList_k.transpose() - xgoal.transpose())*costFunction->getQ()*(xList_k - xgoal);
-        c_mat_to_scalar += 0.5 * uList_k.transpose() * costFunction->getR() * uList_k;
-        // c_mat_to_scalar = forwardkin_cost(xList_k, uList_k, fk_ref[index_k], costFunction, 0);
-    }
-    return c_mat_to_scalar;
-}
-
-stateVec_t KukaArm::finite_diff_cx(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k, CostFunctionKukaArm*& costFunction){
-    stateVec_t cx_fd_k;
-    unsigned int n = xList_k.size();
-    // unsigned int m = uList_k.size();
-    scalar_t cp1;
-    scalar_t cm1;
-    double delta = 1e-3;
-    stateMat_t Dx;
-    Dx.setIdentity();
-    Dx = delta * Dx;
-    // State perturbation for cost
-    for (unsigned int i = 0; i < n; i++)
-    {
-        cp1 = cost_func_expre(index_k, xList_k+Dx.col(i), uList_k, xList_bar_k, costFunction);
-        cm1 = cost_func_expre(index_k, xList_k-Dx.col(i), uList_k, xList_bar_k, costFunction);
-        cx_fd_k.row(i) = (cp1 - cm1)/(2*delta);
-    }
-    return cx_fd_k;
-}
-
-commandVec_t KukaArm::finite_diff_cu(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k, CostFunctionKukaArm*& costFunction){
-    commandVec_t cu_fd_k;
-    // unsigned int n = xList_k.size();
-    unsigned int m = uList_k.size();
-    scalar_t cp1;
-    scalar_t cm1;
-    double delta = 1e-3;
-    commandMat_t Du;
-    Du.setIdentity();
-    Du = delta*Du;
-    // State perturbation for cost
-    for (unsigned int i=0; i < m; i++)
-    {
-        cp1 = cost_func_expre(index_k, xList_k, uList_k+Du.col(i), xList_bar_k, costFunction);
-        cm1 = cost_func_expre(index_k, xList_k, uList_k-Du.col(i), xList_bar_k, costFunction);
-        cu_fd_k.row(i) = (cp1 - cm1)/(2*delta);
-    }
-    return cu_fd_k;
-}
-
 void KukaArm::kuka_arm_dyn_cst_ilqr(const int& nargout, const stateVecTab_t& xList, const commandVecTab_t& uList, stateVecTab_t& FList, 
-                                const stateVecTab_t& xList_bar, CostFunctionKukaArm*& costFunction){
+                                const stateVecTab_t& xList_bar, CostFunctionKukaArm*& costFunction)
+{
+
     // // for a positive-definite quadratic, no control cost (indicated by the iLQG function using nans), is equivalent to u=0
     if(debugging_print) TRACE_KUKA_ARM("initialize dimensions\n");
     unsigned int Nl = xList.size();
@@ -573,178 +382,52 @@ void KukaArm::kuka_arm_dyn_cst_ilqr(const int& nargout, const stateVecTab_t& xLi
 
     scalar_t c_mat_to_scalar;
 
-    if(nargout == 2){
-        // Just for debug, never go to here; Originally, this was to imitate the MATLAB function?
-        const int nargout_update1 = 3;        
-        for (unsigned int k = 0; k < Nl; k++)
-        {
-            if (k == Nl-1)
-            {//isNanVec(uList[k])
-                if(debugging_print) TRACE_KUKA_ARM("before the update1\n");
-                c_mat_to_scalar = 0.5*(xList[k].transpose() - xgoal.transpose()) * costFunction->getQf() * (xList[k] - xgoal);
-                costFunction->getc() += c_mat_to_scalar(0,0);
-                if(debugging_print) TRACE_KUKA_ARM("after the update1\n");
-        } else
-        {
-                // if u is not NaN (not final), add state and control cost
-                if(debugging_print) TRACE_KUKA_ARM("before the update2\n");
-                FList[k] = update(nargout_update1, xList[k], uList[k], AA, BB);
-                c_mat_to_scalar = 0.5*(xList[k].transpose() - xgoal.transpose())*costFunction->getQ()*(xList[k] - xgoal);
-                if(debugging_print) TRACE_KUKA_ARM("after the update2\n");
-                c_mat_to_scalar += 0.5*uList[k].transpose()*costFunction->getR()*uList[k];
-                costFunction->getc() += c_mat_to_scalar(0,0);
-            }
-        }
+
+    const int nargout_update2 = 3;
+    for (unsigned int k=0; k < Nl-1; k++) 
+    {
+        FList[k] = update(nargout_update2, xList[k], uList[k], AA, BB);//assume three outputs, code needs to be optimized
+
+        A_temp[k] = AA;
+        B_temp[k] = BB; 
     }
-    else {
-        // cout<<"check here"<<endl;
-        const int nargout_update2 = 3;
-        for(unsigned int k=0;k<Nl;k++) {
-            if(k == Nl-1) {//isNanVec(uList[k])
-                // if(debugging_print) TRACE_KUKA_ARM("before the update3\n");
-                c_mat_to_scalar = cost_func_expre(k, xList[k], uList[k], xList_bar[k], costFunction);
-                // c_mat_to_scalar = 0.5*(xList[k].transpose() - xgoal.transpose())*costFunction->getQf()*(xList[k] - xgoal);
-                costFunction->getc() += c_mat_to_scalar(0,0);
-                // if(debugging_print) TRACE_KUKA_ARM("after the update3\n");
-            }
-            else {
-                // if(debugging_print) TRACE_KUKA_ARM("before the update4\n");
-                FList[k] = update(nargout_update2, xList[k], uList[k], AA, BB);//assume three outputs, code needs to be optimized
-                // if(debugging_print) TRACE_KUKA_ARM("before the update4-1\n");
-                c_mat_to_scalar = cost_func_expre(k, xList[k], uList[k], xList_bar[k], costFunction);
-                // c_mat_to_scalar = 0.5*(xList[k].transpose() - xgoal.transpose())*costFunction->getQ()*(xList[k] - xgoal);
-                // if(debugging_print) TRACE_KUKA_ARM("after the update4\n");
 
-                // c_mat_to_scalar += 0.5*uList[k].transpose()*costFunction->getR()*uList[k];
-                costFunction->getc() += c_mat_to_scalar(0,0); // TODO: to be checked
-                // if(debugging_print) TRACE_KUKA_ARM("after the update5\n");
-                
-                A_temp[k] = AA;
-                B_temp[k] = BB;
-            }
+    stateVec_t cx_temp;
+    
+    if(debugging_print) TRACE_KUKA_ARM("compute dynamics and cost derivative\n");
+
+    //Manually coded finite diff
+    unsigned int n = xList[0].size();
+    unsigned int m = uList[0].size();
+
+
+
+    for(unsigned int k=0;k<Nl;k++){
+        if (k < Nl-1)
+        {
+            fxList[k] = A_temp[k];
+            fuList[k] = B_temp[k];
         }
+        cx_temp << xList[k] - xgoal;
+      
 
-        stateVec_t cx_temp;
-        
-        if(debugging_print) TRACE_KUKA_ARM("compute dynamics and cost derivative\n");
-
-        //Manually coded finite diff
-        unsigned int n = xList[0].size();
-        unsigned int m = uList[0].size();
-
-        double delta = 1e-3;
-        stateMat_t Dx;
-        commandMat_t Du;
-        Dx.setIdentity();
-        Dx = delta*Dx;
-        Du.setIdentity();
-        Du = delta*Du;
-
-        stateVec_t cx1;
-        stateVec_t cxm1;
-        commandVec_t cu1;
-        commandVec_t cum1;
-        stateVecTab_t cx_fd;
-	    commandVecTab_t cu_fd; 
-	    stateMatTab_t cxx_fd; 
-	    commandR_stateC_tab_t cux_fd; 
-	    commandMatTab_t cuu_fd;
-        cx_fd.resize(Nl+1);
-        cu_fd.resize(Nl+1);
-        cxx_fd.resize(Nl+1);
-        cux_fd.resize(Nl+1);
-        cuu_fd.resize(Nl+1);
-
-        for(unsigned int k=0;k<Nl;k++){
-            if(k<Nl-1){
-                fxList[k] = A_temp[k];
-                fuList[k] = B_temp[k];
-            }
-            cx_temp << xList[k] - xgoal;
-          
-            // State perturbation for cost
-            // for(unsigned int i=0;i<n;i++){
-            //     cp1 = cost_func_expre(k, xList[k]+Dx.col(i), uList[k], costFunction);
-            //     cm1 = cost_func_expre(k, xList[k]-Dx.col(i), uList[k], costFunction);
-            //     cx_fd[k].row(i) = (cp1 - cm1)/(2*delta);
-            // }
-
-            // Control perturbation for cost
-            // for(unsigned int i=0;i<m;i++){
-            //     cp1 = cost_func_expre(k, xList[k], uList[k]+Du.col(i), costFunction);
-            //     cm1 = cost_func_expre(k, xList[k], uList[k]-Du.col(i), costFunction);
-            //     cu_fd[k].row(i) = (cp1 - cm1)/(2*delta);
-            // }
-
-            cx_fd[k] = finite_diff_cx(k, xList[k], uList[k], xList_bar[k], costFunction);
-            cu_fd[k] = finite_diff_cu(k, xList[k], uList[k], xList_bar[k], costFunction);
-
-            // State perturbation for cxx
-            for(unsigned int i=0;i<n;i++){
-                cx1 = finite_diff_cx(k, xList[k]+Dx.col(i), uList[k], xList_bar[k], costFunction);
-                cxm1 = finite_diff_cx(k, xList[k]-Dx.col(i), uList[k], xList_bar[k], costFunction);
-                cxx_fd[k].col(i) = (cx1 - cxm1)/(2*delta);
-            }
-
-            // Control perturbation for cuu
-            for(unsigned int i=0;i<m;i++){
-                cu1 = finite_diff_cu(k, xList[k], uList[k]+Du.col(i), xList_bar[k], costFunction);
-                cum1 = finite_diff_cu(k, xList[k], uList[k]-Du.col(i), xList_bar[k], costFunction);
-                cuu_fd[k].col(i) = (cu1 - cum1)/(2*delta);
-            }
-
-            // Analytical derivatives given quadratic cost
-            // costFunction->getcx()[k] = costFunction->getQ()*cx_temp;
-            // costFunction->getcu()[k] = costFunction->getR()*uList[k];
-            // costFunction->getcxx()[k] = costFunction->getQ();
-            // costFunction->getcux()[k].setZero();
-            // costFunction->getcuu()[k] = costFunction->getR(); 
-
-            //Note that cu , cux and cuu at the final time step will never be used (see ilqrsolver::doBackwardPass)
-            costFunction->getcx()[k] = cx_fd[k];
-            costFunction->getcu()[k] = cu_fd[k];
-            costFunction->getcxx()[k] = cxx_fd[k];
-            costFunction->getcux()[k].setZero();
-            costFunction->getcuu()[k] = cuu_fd[k];      
-
-            // cout << "debug for derivatives cx" << costFunction->getcx()[k] << endl;
-            // cout << "debug for derivatives cu" << costFunction->getcu()[k] << endl;
-            // cout << "debug for derivatives cxx" << costFunction->getcxx()[k] << endl;
-            // cout << "debug for derivatives cuu" << costFunction->getcuu()[k] << endl;
-            // cout << "debug for derivatives cxx" << costFunction->getcxx()[k] << endl;  
-            // cout << "Q = " << costFunction->getQ() << endl;     
-        }
-        if(debugging_print) TRACE_KUKA_ARM("update the final value of cost derivative \n");
-
-        // Analytical derivatives given quadratic cost
-        // costFunction->getcx()[Nl-1] = costFunction->getQf()*(xList[Nl-1]-xgoal);
-        // costFunction->getcu()[Nl-1] = costFunction->getR()*uList[Nl-1];
-        // costFunction->getcxx()[Nl-1] = costFunction->getQf();
-        // costFunction->getcux()[Nl-1].setZero();
-        // costFunction->getcuu()[Nl-1] = costFunction->getR();
-
-        // cout << "debug for derivatives cx" << costFunction->getcx()[Nl-1] - costFunction->getQf()*(xList[Nl-1]-xgoal) << endl;
-        // cout << "debug for derivatives cu" << costFunction->getcu()[Nl-2] << endl;//- costFunction->getR()*uList[Nl-2] << endl;
-        // cout << "debug for derivatives cxx" << costFunction->getcxx()[Nl-1] - costFunction->getQf() << endl;
-        // cout << "debug for derivatives cuu" << costFunction->getcuu()[Nl-1] - costFunction->getR() << endl;
-        // cout << "debug for derivatives cxx" << costFunction->getcxx()[Nl-1] << endl;  
-        // cout << "Q = " << costFunction->getQ() << endl;
-        // for (unsigned int a=0; a<Nl; a++) {
-        //     cout << "cost derivative: " << a << endl;
-        //     cout << costFunction->getcx()[a] << endl;
-        //     cout << "xList: " << a << endl;
-        //     cout << xList[a] << endl;
-        // }
-
-        if(debugging_print) TRACE_KUKA_ARM("set unused matrices to zero \n");
-
-        // the following useless matrices are set to Zero.
-        //fxx, fxu, fuu are not defined since never used
-        for(unsigned int k=0;k<Nl;k++){
-            FList[k].setZero();
-        }
-        costFunction->getc() = 0;
     }
+    if(debugging_print) TRACE_KUKA_ARM("update the final value of cost derivative \n");
+
+
+
+    if(debugging_print) TRACE_KUKA_ARM("set unused matrices to zero \n");
+
+    costFunction->computeDerivatives(xList, uList, xList_bar);
+
+    // the following useless matrices are set to Zero.
+    //fxx, fxu, fuu are not defined since never used
+
+    // for(unsigned int k=0;k<Nl;k++){
+    //     FList[k].setZero();
+    // }
+    // costFunction->getc() = 0;
+    
     if(debugging_print) TRACE_KUKA_ARM("finish kuka_arm_dyn_cst\n");
 }
 
@@ -765,25 +448,13 @@ void KukaArm::kuka_arm_dyn_cst_min_output(const unsigned int& index_k, const dou
     const int nargout_update1 = 1;
 
     if (isUNan) { 
-        // if(debugging_print) TRACE_KUKA_ARM("before the update1\n");
-        c_mat_to_scalar = cost_func_expre(index_k, xList_curr, uList_curr, xList_cur_bar, costFunction);
-        // std::cout << "here ILQG Solve initialize kuka_arm_dyn_cst_min_output" << std::endl;
-
-        // c_mat_to_scalar = 0.5*(xList_curr.transpose() - xgoal.transpose()) * costFunction->getQf() * (xList_curr - xgoal);
+        c_mat_to_scalar = costFunction->cost_func_expre(index_k, xList_curr, uList_curr, xList_cur_bar);
         costFunction->getc() += c_mat_to_scalar(0,0);
-        // if(debugging_print) TRACE_KUKA_ARM("after the update1\n");
-
     }
     else 
     {
-
-        // if(debugging_print) TRACE_KUKA_ARM("before the update2\n");
-
         xList_next = update(nargout_update1, xList_curr, uList_curr, AA, BB);
-        c_mat_to_scalar = cost_func_expre(index_k, xList_curr, uList_curr, xList_cur_bar, costFunction);
-        // c_mat_to_scalar = 0.5*(xList_curr.transpose() - xgoal.transpose())*costFunction->getQ()*(xList_curr - xgoal);
-        // if(debugging_print) TRACE_KUKA_ARM("after the update2\n");
-        // c_mat_to_scalar += 0.5*uList_curr.transpose()*costFunction->getR()*uList_curr;
+        c_mat_to_scalar = costFunction->cost_func_expre(index_k, xList_curr, uList_curr, xList_cur_bar);
         costFunction->getc() += c_mat_to_scalar(0,0);
 
     }
@@ -805,7 +476,8 @@ stateVec_t KukaArm::update(const int& nargout, const stateVec_t& X, const comman
     Xdot3 = kuka_arm_dynamics(X + 0.5*dt*Xdot2, U);
     Xdot4 = kuka_arm_dynamics(X + dt*Xdot3, U);
     stateVec_t X_new;
-    X_new = X + (dt/6)*(Xdot1 + 2*Xdot2 + 2*Xdot3 + Xdot4);
+    X_new = X + (dt/6) * (Xdot1 + 2 * Xdot2 + 2 * Xdot3 + Xdot4);
+
     // Simple Euler Integration (for debug)
     //    X_new = X + (dt)*Xdot1;
     
@@ -820,13 +492,10 @@ stateVec_t KukaArm::update(const int& nargout, const stateVec_t& X, const comman
 
     if(debugging_print) TRACE_KUKA_ARM("update: X_new\n");
 
-    //######3
-    // int as = 0;
-    //#########3
 
     if (nargout > 1)
-    {// && (as!=0)){
-        //cout << "NEVER HERE" << endl;
+    {
+        // cout << "NEVER HERE" << endl;
         unsigned int n = X.size();
         unsigned int m = U.size();
 
@@ -839,7 +508,8 @@ stateVec_t KukaArm::update(const int& nargout, const stateVec_t& X, const comman
         Du = delta*Du;
 
         // State perturbation?
-        for(unsigned int i=0;i<n;i++){
+        for (unsigned int i=0;i<n;i++)
+        {
             Xp1 = kuka_arm_dynamics(X+Dx.col(i),U);
             Xm1 = kuka_arm_dynamics(X-Dx.col(i),U);
             A1.col(i) = (Xp1 - Xm1)/(2*delta);
@@ -1001,67 +671,3 @@ stateR_commandC_tab_t& KukaArm::getfuList()
     return fuList;
 }
 
-
-void KukaArm::kuka_arm_dyn_cst_udp(const int& nargout, const stateVecTab_t& xList, const commandVecTab_t& uList, stateVecTab_t& FList,
-                                CostFunctionKukaArm*& costFunction){
-    if(debugging_print) TRACE_KUKA_ARM("initialize dimensions\n");
-    unsigned int Nl = xList.size();
-    
-    costFunction->getc() = 0;
-    AA.setZero();
-    BB.setZero();
-    if(debugging_print) TRACE_KUKA_ARM("compute cost function\n");
-
-    scalar_t c_mat_to_scalar;
-    c_mat_to_scalar.setZero();
-
-    if(nargout == 2){
-        const int nargout_update1 = 3;        
-        for(unsigned int k=0;k<Nl;k++){
-            if (k == Nl-1){
-                if(debugging_print) TRACE_KUKA_ARM("before the update1\n");
-                c_mat_to_scalar = 0.5*(xList[k].transpose() - xgoal.transpose()) * costFunction->getQf() * (xList[k] - xgoal);
-                costFunction->getc() += c_mat_to_scalar(0,0);
-                if(debugging_print) TRACE_KUKA_ARM("after the update1\n");
-            }else{
-                if(debugging_print) TRACE_KUKA_ARM("before the update2\n");
-                FList[k] = update(nargout_update1, xList[k], uList[k], AA, BB);
-                c_mat_to_scalar = 0.5*(xList[k].transpose() - xgoal.transpose())*costFunction->getQ()*(xList[k] - xgoal);
-                if(debugging_print) TRACE_KUKA_ARM("after the update2\n");
-                c_mat_to_scalar += 0.5*uList[k].transpose()*costFunction->getR()*uList[k];
-                costFunction->getc() += c_mat_to_scalar(0,0);
-            }
-        }
-    }else{
-        stateVec_t cx_temp;
-        if(debugging_print) TRACE_KUKA_ARM("compute cost derivative\n");
-        for(unsigned int k=0;k<Nl-1;k++){
-            // cx_temp << xList[k](0,0)-xgoal(0), xList[k](1,0)-xgoal(1), xList[k](2,0)-xgoal(2), xList[k](3,0)-xgoal(3);
-            // std::cout << "err" <<std::endl;
-            //LW------------------------------------------------------------------------------
-            // cx_temp << xList[k] - xgoal;
-            //LW----------------------------------------------
-            cx_temp = xList[k] - xgoal;
-
-            costFunction->getcx()[k] = costFunction->getQ()*cx_temp;
-            costFunction->getcu()[k] = costFunction->getR()*uList[k];
-            costFunction->getcxx()[k] = costFunction->getQ();
-            costFunction->getcux()[k].setZero();
-            costFunction->getcuu()[k] = costFunction->getR();            
-        }
-        if(debugging_print) TRACE_KUKA_ARM("update the final value of cost derivative \n");
-        costFunction->getcx()[Nl-1] = costFunction->getQf()*(xList[Nl-1]-xgoal);
-        costFunction->getcu()[Nl-1] = costFunction->getR()*uList[Nl-1];
-        costFunction->getcxx()[Nl-1] = costFunction->getQf();
-        costFunction->getcux()[Nl-1].setZero();
-        costFunction->getcuu()[Nl-1] = costFunction->getR();
-        if(debugging_print) TRACE_KUKA_ARM("set unused matrices to zero \n");
-
-        // the following useless matrices and scalars are set to Zero.
-        for(unsigned int k=0;k<Nl;k++){
-            FList[k].setZero();
-        }
-        costFunction->getc() = 0;
-    }
-    if(debugging_print) TRACE_KUKA_ARM("finish kuka_arm_dyn_cst\n");
-}
