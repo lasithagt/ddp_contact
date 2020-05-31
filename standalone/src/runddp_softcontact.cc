@@ -104,7 +104,7 @@ class RobotPlanRunner
 
         #endif
 
-        ILQRSolver::traj lastTraj;
+        optimizer::ILQRSolver::traj lastTraj;
 
         Eigen::VectorXd q_pos_init( (stateSize-3) / 2);
         Eigen::VectorXd q_vel_init( (stateSize-3) / 2);
@@ -204,12 +204,19 @@ class RobotPlanRunner
           u_0[i].head(7) = gravityTorque;
         }
 
-        KukaArm KukaArmModel(dt, N, xgoal, kukaRobot, contactModel, fk_ref);
+        KukaArm KukaArmModel(dt, N, kukaRobot, contactModel, fk_ref);
+
+        /* -------------------- Optimizer Params ------------------------ */
+        optimizer::ILQRSolver::OptSet solverOptions;
+        solverOptions.n_hor = N;
+        solverOptions.tolFun = tolFun;
+        solverOptions.tolGrad = tolGrad;
+        solverOptions.max_iter = iterMax;
 
         CostFunctionKukaArm costKukaArm;
-        ILQRSolver testSolverKukaArm(KukaArmModel,costKukaArm,ENABLE_FULLDDP,ENABLE_QPBOX);
+        optimizer::ILQRSolver testSolverKukaArm(KukaArmModel, costKukaArm, solverOptions, N, dt, ENABLE_FULLDDP, ENABLE_QPBOX);
 
-        testSolverKukaArm.firstInitSolver(xinit, xgoal, xtrack, u_0, N, dt, iterMax, tolFun, tolGrad);   
+        // testSolverKukaArm.firstInitSolver(N, dt);   
 
     #endif
 
@@ -221,7 +228,7 @@ class RobotPlanRunner
     for (unsigned int i = 0; i < Num_run; i++) 
     {
       // testSolverKukaArm.initializeTraj();
-      testSolverKukaArm.solveTrajectory();
+      testSolverKukaArm.solveTrajectory(xinit, u_0, xtrack);
     }
 
     gettimeofday(&tend,NULL);
@@ -262,20 +269,6 @@ class RobotPlanRunner
     cout << "\tTime of backward pass (second): " << lastTraj.time_backward.sum() << " (" << 100.0*lastTraj.time_backward.sum()/texec << "%)" << endl;
 
 
-    // cout << "\tTime of RBT massMatrix.inverse (second): " << finalTimeProfile.time_period2 << " (" << 100.0*finalTimeProfile.time_period2/texec << "%)" << endl;
-    // cout << "\tTime of RBT f_ext instantiation (second): " << finalTimeProfile.time_period3 << " (" << 100.0*finalTimeProfile.time_period3/texec << "%)" << endl;
-    // cout << "\tTime of RBT dynamicsBiasTerm (second): " << finalTimeProfile.time_period4 << " (" << 100.0*finalTimeProfile.time_period4/texec << "%)" << endl;
-    
-    // // debugging trajectory and control outputs (print func)
-    // cout << "--------- final joint state trajectory ---------" << endl;
-    // for(unsigned int i=0;i<=N;i++){
-    //   cout << "lastTraj.xList[" << i << "]:" << lastTraj.xList[i].transpose() << endl;
-    // }
-    // cout << "--------- final joint torque trajectory ---------" << endl;
-    
-    // for(unsigned int i=0;i<=N;i++){
-    //   cout << "lastTraj.uList[" << i << "]:" << lastTraj.uList[i].transpose() << endl;
-    // }
 
     cout << "lastTraj.xList[" << N << "]:" << lastTraj.xList[N].transpose() << endl;
     cout << "lastTraj.uList[" << N << "]:" << lastTraj.uList[N].transpose() << endl;
