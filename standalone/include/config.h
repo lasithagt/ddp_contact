@@ -33,8 +33,8 @@
 #define fullstatecommandSize 21
 #endif
 
-#define TimeHorizon 2.0
-#define TimeStep 0.005
+#define TimeHorizon 1
+#define TimeStep 0.01
 #define NumberofKnotPt TimeHorizon/TimeStep
 #define InterpolationScale 10 //0.01/1e-3
 const int32_t kNumJoints = 7;

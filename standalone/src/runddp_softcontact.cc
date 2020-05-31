@@ -204,7 +204,7 @@ class RobotPlanRunner
           u_0[i].head(7) = gravityTorque;
         }
 
-        KukaArm KukaArmModel(dt, N, kukaRobot, contactModel, fk_ref);
+        KukaArm KukaArmModel(dt, N, kukaRobot, contactModel);
 
         /* -------------------- Optimizer Params ------------------------ */
         optimizer::ILQRSolver::OptSet solverOptions;
