@@ -81,19 +81,19 @@ typedef Eigen::Matrix<double,stateSize+commandSize,1> projStateAndCommand_t;    
 #endif
 
 // typedef for vectorized state and command matrix (over the horizon)
-typedef std::vector<stateVec_t> stateVecTab_t;
+typedef std::vector<stateVec_t, Eigen::aligned_allocator<stateVec_t> > stateVecTab_t;
 typedef std::vector<double> costVecTab_t;
-typedef std::vector<commandVec_t> commandVecTab_t;
-typedef std::vector<stateMat_t> stateMatTab_t;
-typedef std::vector<commandMat_t> commandMatTab_t;
-typedef std::vector<stateR_commandC_t> stateR_commandC_tab_t;
-typedef std::vector<commandR_stateC_t> commandR_stateC_tab_t;
-typedef std::vector<stateVec_half_t> stateVecTab_half_t;
-typedef std::vector<projStateAndCommand_t> projStateAndCommandTab_t;
+typedef std::vector<commandVec_t, Eigen::aligned_allocator<commandVec_t> > commandVecTab_t;
+typedef std::vector<stateMat_t, Eigen::aligned_allocator<stateMat_t> > stateMatTab_t;
+typedef std::vector<commandMat_t, Eigen::aligned_allocator<commandMat_t> > commandMatTab_t;
+typedef std::vector<stateR_commandC_t, Eigen::aligned_allocator<stateR_commandC_t> > stateR_commandC_tab_t;
+typedef std::vector<commandR_stateC_t, Eigen::aligned_allocator<commandR_stateC_t> > commandR_stateC_tab_t;
+typedef std::vector<stateVec_half_t, Eigen::aligned_allocator<stateVec_half_t> > stateVecTab_half_t;
+typedef std::vector<projStateAndCommand_t, Eigen::aligned_allocator<projStateAndCommand_t> > projStateAndCommandTab_t;
 
 //typedef std::vector<stateTens_t> stateTensTab_t;
-typedef std::vector<std::vector<stateMat_t> > stateTensTab_t;
-typedef std::vector<std::vector<stateR_commandC_t> > stateR_commandC_Tens_t;
+typedef std::vector<std::vector<stateMat_t, Eigen::aligned_allocator<stateMat_t> > > stateTensTab_t;
+typedef std::vector<std::vector<stateR_commandC_t, Eigen::aligned_allocator<stateR_commandC_t> > > stateR_commandC_Tens_t;
 
 
 

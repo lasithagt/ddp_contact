@@ -72,5 +72,23 @@ protected:
 
 };
 
+// class TerminalCostFunction
+// {
+// public:
+// 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+// 	TerminalCostFunction() = default;
+// 	~TerminalCostFunction() = default;
+
+// };
+
+// class ADMMCostFunction
+// {
+// public:
+// 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+// 	ADMMCost() = default;
+// 	~ADMMCost() = default;
+
+// };
+
 
 #endif // COSTFUNCTIONKUKAARM_H

@@ -52,7 +52,7 @@ public:
     KukaArm_TRK(double& iiwa_dt, unsigned int& iiwa_N, stateVec_t& iiwa_xgoal,ContactModel::SoftContactModel& contact_model,std::vector<Eigen::Matrix<double,6,1> >& iiwa_fk_ref);
 
     KukaArm_TRK(double& iiwa_dt, unsigned int& iiwa_N, stateVec_t& iiwa_xgoal, stateVecTab_t iiwa_xtrack, std::unique_ptr<KUKAModelKDL>& kukaRobot, ContactModel::SoftContactModel& contact_model,
-            std::vector<Eigen::Matrix<double,6,1>>& iiwa_fk_ref);
+            std::vector<Eigen::Matrix<double,6,1> >& iiwa_fk_ref);
 
 
     ~KukaArm_TRK(){};
@@ -78,6 +78,7 @@ protected:
     stateR_commandC_Tens_t fuuList;
 
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     struct timeprofile
     {
         double time_period1, time_period2, time_period3, time_period4;
@@ -99,7 +100,7 @@ public:
     //######
     
     stateVec_t xgoal;
-    std::vector<Eigen::Matrix<double,6,1>> fk_ref;
+    std::vector<Eigen::Matrix<double,6,1> > fk_ref;
     stateVecTab_t xtrack;
 
 private:
