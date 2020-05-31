@@ -1,4 +1,3 @@
-// #pragma once
 
 #ifndef KUKAARM_H
 #define KUKAARM_H
@@ -7,20 +6,18 @@
 #include "cost_function_kuka_arm.h"
 #include "SoftContactModel.h"
 
-// #include "drake/common/find_resource.h"
-
-// #include "drake/multibody/parsers/urdf_parser.h"
-// #include "drake/multibody/rigid_body_tree.h"
 #include "KukaModel.h"
-
 
 
 #include <cstdio>
 #include <iostream>
 #include <Eigen/Dense>
+#include <unsupported/Eigen/NumericalDiff>
+
 #include <math.h>
 
 #include <memory>
+#include <functional>
 // #include <mutex>
 // std::mutex mtx;
 
@@ -39,50 +36,60 @@
 using namespace Eigen;
 using namespace std;
 
-// using drake::manipulation::planner::ConstraintRelaxingIk;
-// using drae::manipulation::kuka_iiwa::kIiwaArmNumJoints;
-// using drake::manipulation::util::WorldSimTreeBuilder;
-// using drake::manipulation::util::ModelInstanceInfo;
-// using drake::systems::RigidBodyPlant;
-
-
 
 class KukaArm
 {
-public:
-    KukaArm();
-    KukaArm(double& iiwa_dt, unsigned int& iiwa_N, stateVec_t& iiwa_xgoal, ContactModel::SoftContactModel& contact_model,
-            std::vector<Eigen::Matrix<double,6,1> >& iiwa_fk_ref);
+    using Jacobian = Eigen::Matrix<double, stateSize, stateSize + commandSize>;
 
-    KukaArm(double& iiwa_dt, unsigned int& iiwa_N, stateVec_t& iiwa_xgoal, std::unique_ptr<KUKAModelKDL>& kukaRobot, ContactModel::SoftContactModel& contact_model, std::vector<Eigen::Matrix<double,6,1> >& iiwa_fk_ref);
-    ~KukaArm(){};
-protected:
-    // attributes
-    unsigned int stateNb;
-    unsigned int commandNb;
-    commandVec_t lowerCommandBounds;
-    commandVec_t upperCommandBounds;
+    template <class T, int S, int C>
+    struct Differentiable
+    {
+        /*****************************************************************************/
+        /*** Replicate Eigen's generic functor implementation to avoid inheritance ***/
+        /*** We only use the fixed-size functionality ********************************/
+        /*****************************************************************************/
+        enum { InputsAtCompileTime = S + C, ValuesAtCompileTime = S };
+        using Scalar        = T;
+        using InputType     = Eigen::Matrix<T, InputsAtCompileTime, 1>;
+        using ValueType     = Eigen::Matrix<T, ValuesAtCompileTime, 1>;
+        using JacobianType  = Eigen::Matrix<T, ValuesAtCompileTime, InputsAtCompileTime>;
+        int inputs() const { return InputsAtCompileTime; }
+        int values() const { return ValuesAtCompileTime; }
+        int operator()(const Eigen::Ref<const InputType> &xu, Eigen::Ref<ValueType> dx) const
+        {
+            dx =  dynamics_(xu.template head<S>(), xu.template tail<C>());
+            return 0;
+        }
+        /*****************************************************************************/
 
-    stateMat_t fx;
-    stateTens_t fxx;
-    stateR_commandC_t fu;
-    stateR_commandC_commandD_t fuu;
-    stateR_stateC_commandD_t fxu;
-    stateR_commandC_stateD_t fux;
+        // using DiffFunc = std::function<Eigen::Matrix<T, S, 1>(const Eigen::Matrix<T, S, 1>&, const Eigen::Matrix<T, C, 1>&)>;
+        using DiffFunc = std::function<int(int&)>;
+        Differentiable(const DiffFunc &dynamics) : dynamics_(dynamics) {}
+        Differentiable() = default;
 
-    stateMatTab_t fxList;
-    stateR_commandC_tab_t fuList;
-    stateTensTab_t fxxList;
-    stateTensTab_t fxuList;
-    stateR_commandC_Tens_t fuuList;
+    private:
+        DiffFunc dynamics_;
+    };
 
-public:
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    /* --------------- to evaluate time profiles ------------------------*/
     struct timeprofile
     {
         double time_period1, time_period2, time_period3, time_period4;
         unsigned int counter0_, counter1_, counter2_;
     };
+
+
+protected:
+    unsigned int stateNb;
+    unsigned int commandNb;
+    commandVec_t lowerCommandBounds;
+    commandVec_t upperCommandBounds;
+
+    stateMat_t fx_;
+    stateR_commandC_t fu_;
+
+    stateMatTab_t fxList;
+    stateR_commandC_tab_t fuList;
 
 private:
     double dt;
@@ -93,12 +100,7 @@ private:
 
 public:
     static const double mc, mp, l, g;
-    
-    //######
     unsigned int globalcnt;
-    //######
-    
-    stateVec_t xgoal;
     std::vector<Eigen::Matrix<double,6,1> > fk_ref;
 
 private:
@@ -107,8 +109,6 @@ private:
     stateMat_half_t H, C; // inertial, corillois dynamics
     stateVec_half_t G; // gravity? what is this?
     stateR_half_commandC_t Bu; //input mapping
-    stateVec_half_t velocity;
-    stateVec_half_t accel;
     stateVec_t Xdot_new;
     stateVec_half_t vd;
     stateVecTab_half_t vd_thread;
@@ -119,16 +119,7 @@ private:
     stateR_commandC_t B1, B2, B3, B4;
     stateVec_t Xp, Xp1, Xp2, Xp3, Xp4, Xm, Xm1, Xm2, Xm3, Xm4;
     
-    bool debugging_print;
-    stateMat_t AA;
-    stateR_commandC_t BB;
-    stateMatTab_t A_temp;
-    stateR_commandC_tab_t B_temp;
-    
-    // std::unique_ptr<RigidBodyTree<double>> totalTree_{nullptr};
-    // std::unique_ptr<RigidBodyTree<double>> robot_thread_{nullptr};
     std::unique_ptr<KUKAModelKDL> kukaRobot_;
-
 
     Eigen::VectorXd q;
     Eigen::VectorXd qd;
@@ -136,18 +127,25 @@ private:
     Eigen::Vector3d force_current;
 
     std::vector<Eigen::VectorXd> q_thread, qd_thread;
+    bool debugging_print;
+
+    Jacobian j_;
+    Differentiable<double, stateSize, commandSize> diff_;
+    Eigen::NumericalDiff<Differentiable<double, stateSize, commandSize>, Eigen::Central> num_diff_;
 
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+    KukaArm() : diff_([x](int& x) -> int { return x; }),
+      num_diff_(diff_) {}
 
+  // diff_([this](const stateVec_t& x, const commandVec_t& u) -> stateVec_t{ return this->kuka_arm_dynamics(x, u); }),
+  //     num_diff_(diff_) {}
+
+    ~KukaArm(){};
+    KukaArm(double& iiwa_dt, unsigned int& iiwa_N,  std::unique_ptr<KUKAModelKDL>& kukaRobot, ContactModel::SoftContactModel& contact_model, std::vector<Eigen::Matrix<double,6,1> >& iiwa_fk_ref);
     stateVec_t kuka_arm_dynamics(const stateVec_t& X, const commandVec_t& tau);
-
-    void kuka_arm_dyn_cst_ilqr(const int& nargout, const stateVecTab_t& xList, const commandVecTab_t& uList, stateVecTab_t& FList, const stateVecTab_t& xList_bar, CostFunctionKukaArm*& costFunction);
-    void kuka_arm_dyn_cst_min_output(const unsigned int& index_k, const double& dt, const stateVec_t& xList_curr, const commandVec_t& uList_curr,  const stateVec_t& xList_cur_bar, const bool& isUNan, stateVec_t& xList_next, CostFunctionKukaArm*& costFunction);
-    // void kuka_arm_dyn_cst_udp(const int& nargout, const stateVecTab_t& xList, const commandVecTab_t& uList, stateVecTab_t& FList, CostFunctionKukaArm*& costFunction);
-
-    stateVec_t update(const int& nargout, const stateVec_t& X, const commandVec_t& U, stateMat_t& A, stateR_commandC_t& B);
-    void grad(const stateVec_t& X, const commandVec_t& U, stateMat_t& A, stateR_commandC_t& B);
-    void hessian(const stateVec_t& X, const commandVec_t& U, stateTens_t& fxx_p, stateR_stateC_commandD_t& fxu_p, stateR_commandC_commandD_t& fuu_p);    
+    void compute_dynamics_jacobian(const stateVecTab_t& xList, const commandVecTab_t& uList);
+    void update_fxu(const stateVec_t& X, const commandVec_t& U, stateMat_t& A, stateR_commandC_t& B);
     struct timeprofile getFinalTimeProfile();
 
     unsigned int getStateNb();
