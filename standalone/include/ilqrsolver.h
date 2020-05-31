@@ -35,11 +35,14 @@
 using namespace Eigen;
 //USING_NAMESPACE_QPOASES
 
+namespace optimizer {
 
 
 class ILQRSolver
 {
 public:
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
     struct traj
     {
         stateVecTab_t xList;
@@ -51,7 +54,7 @@ public:
         Eigen::VectorXd time_forward, time_backward, time_derivative; //computation time?
     };
 
-    struct tOptSet {
+    struct OptSet {
         int n_hor;
         int debug_level;
         stateVec_t xInit;
@@ -59,15 +62,12 @@ public:
         double **p;
         const double *alpha;
         int n_alpha;
-        double lambdaMax;
-        double lambdaMin;
-        double lambdaInit;
-        double dlambdaInit;
+        double lambdaMin, lambdaMax;
+        double lambdaInit, dlambdaInit;
         double lambdaFactor;
         unsigned int max_iter;
-        double tolGrad;
-        double tolFun;
-        double tolConstraint;
+        double tolGrad, tolFun, tolConstraint;
+
         double zMin;
         int regType;
         int iterations;
@@ -76,45 +76,29 @@ public:
         double *log_cost;
         double dV[2];
         
-        double w_pen_l;
-        double w_pen_f;
-        double w_pen_max_l;
-        double w_pen_max_f;
-        double w_pen_init_l;
-        double w_pen_init_f;
-        double w_pen_fact1;
-        double w_pen_fact2;
-        
         int print;
         double print_head; // print headings every print_head lines
         double last_head;
         Eigen::VectorXd time_backward, time_forward, time_derivative;
         Eigen::VectorXd alphaList;
-        // traj_t *nominal;
-        // traj_t *candidates[NUMBER_OF_THREADS]; 
-        // traj_t trajectories[NUMBER_OF_THREADS+1];
-        // multipliers_t multipliers;
+
+        OptSet() : debug_level(2), n_alpha(11), lambdaMin(1e-6), lambdaMax(1e10), lambdaInit(1), dlambdaInit(1), lambdaFactor(1.6), max_iter(500), 
+                    tolGrad(1e-4), tolFun(1e-4), tolConstraint(1e-7), zMin(0.0), regType(1), print(2) {}
+
     };
 
-public:
-    ILQRSolver(KukaArm& iiwaDynamicModel, CostFunctionKukaArm& iiwaCostFunction, bool fullDDP=0,bool QPBox=0);
-private:
-protected:
-    // attributes //
-public:
+
 private:
     KukaArm* dynamicModel;
     CostFunctionKukaArm* costFunction;
     unsigned int stateNb;
     unsigned int commandNb;
-    stateVec_t xInit; //matrix of <statesize, 1> = essentially a vector
-    stateVec_t xgoal;
+
     unsigned int N;
     unsigned int iter;
     double dt;
-    commandVecTab_t initCommand;
+    // commandVecTab_t initCommand;
 
-    stateVecTab_t xList_bar; 
     stateVecTab_t xList; // vector/array of stateVec_t = basically knot config over entire time horizon
     commandVecTab_t uList;
     commandVecTab_t uListFull;
@@ -144,10 +128,10 @@ private:
     double alpha;
 
     stateMat_t lambdaEye;
-    unsigned int backPassDone;
-    unsigned int fwdPassDone;
-    unsigned int initFwdPassDone;
-    unsigned int diverge;
+    int backPassDone;
+    int fwdPassDone;
+    int initFwdPassDone;
+    int diverge;
 
     /* QP variables */
     //QProblemB* qp;
@@ -159,29 +143,27 @@ private:
     commandVec_t upperCommandBounds;
     commandVec_t lb;
     commandVec_t ub;
-    // int nWSR;
     //real_t* xOpt;
 
-    tOptSet Op;
+    OptSet Op;
     Eigen::Vector2d dV;
     bool debugging_print;    
     int newDeriv;
     double g_norm_i, g_norm_max, g_norm_sum;
     bool isUNan;
-protected:
-    // methods
+
 public:
-    void firstInitSolver(stateVec_t& iiwaxInit, stateVec_t& iiwaxDes, stateVecTab_t& x_bar, commandVecTab_t initialTorque, unsigned int& iiwaN,
-                    double& iiwadt, unsigned int& iiwamax_iter, double& iiwatolFun, double& iiwatolGrad);
-    void solveTrajectory();
-    void initializeTraj();
-    void standardizeParameters(tOptSet *o);
+    ILQRSolver(KukaArm& DynamicModel, CostFunctionKukaArm& CostFunction, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox);
+    void solveTrajectory(const stateVec_t& x_0, const commandVecTab_t& u_0, const stateVecTab_t& x_track);
+    void initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0, const stateVecTab_t& x_track);
     struct traj getLastSolvedTrajectory();
+    inline stateVec_t forward_integration(const stateVec_t& X, const commandVec_t& U);
     void doBackwardPass();
-    void doForwardPass();
+    void doForwardPass(const stateVec_t& x_0, const stateVecTab_t& x_track);
     bool isPositiveDefinite(const commandMat_t & Quu); 
-protected:
 };
+
+} // namesapce
 
 
 #endif // ILQRSOLVER_H
