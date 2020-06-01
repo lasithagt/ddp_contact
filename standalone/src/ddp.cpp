@@ -169,11 +169,11 @@ void DDP::Run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
 
 
     gettimeofday(&tbegin, NULL);
-
+    
 
     // Run iLQR 
     // testSolverKukaArm.initializeTraj();
-    solver.solveTrajectory(xinit, u_0, xtrack);
+    solver.solve(xinit, u_0, xtrack);
     
 
     /* ------------------------------------------------------------------- */

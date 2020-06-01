@@ -228,7 +228,7 @@ class RobotPlanRunner
     for (unsigned int i = 0; i < Num_run; i++) 
     {
       // testSolverKukaArm.initializeTraj();
-      testSolverKukaArm.solveTrajectory(xinit, u_0, xtrack);
+      testSolverKukaArm.solve(xinit, u_0, xtrack);
     }
 
     gettimeofday(&tend,NULL);

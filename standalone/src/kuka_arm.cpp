@@ -47,12 +47,6 @@ KukaArm::KukaArm(double& iiwa_dt, unsigned int& iiwa_N, std::unique_ptr<KUKAMode
     q.resize(stateSize/2);
     qd.resize(stateSize/2);
 
-    // q_thread.resize(NUMBER_OF_THREAD);
-    // qd_thread.resize(NUMBER_OF_THREAD);
-    // for(unsigned int i=0;i<NUMBER_OF_THREAD;i++){
-    //     q_thread[i].resize(stateSize/2);
-    //     qd_thread[i].resize(stateSize/2);
-    // }
 
     finalTimeProfile.time_period1 = 0;
     finalTimeProfile.time_period2 = 0;

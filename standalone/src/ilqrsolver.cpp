@@ -86,7 +86,7 @@ ILQRSolver::ILQRSolver(KukaArm& iiwaDynamicModel, CostFunctionKukaArm& iiwaCostF
 
 }
 
-void ILQRSolver::solveTrajectory(const stateVec_t& x_0, const commandVecTab_t& u_0, const stateVecTab_t& x_track)
+void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const stateVecTab_t& x_track)
 {
     //==============
     // Checked!!v
@@ -391,37 +391,44 @@ inline stateVec_t ILQRSolver::forward_integration(const stateVec_t& X, const com
 
 void ILQRSolver::doBackwardPass()
 {    
-    if(Op.regType == 1)
-        lambdaEye = Op.lambda*stateMat_t::Identity();
+    if (Op.regType == 1)
+    {
+        lambdaEye = Op.lambda * stateMat_t::Identity();
+    }
     else
-        lambdaEye = Op.lambda*stateMat_t::Zero();
+    {
+        lambdaEye = Op.lambda * stateMat_t::Zero();
+    }
 
     diverge = 0;
     
     g_norm_sum = 0.0;
-    Vx[N] = costFunction->getcx()[N];
-    Vxx[N] = costFunction->getcxx()[N];
+    Vx[N]      = costFunction->getcx()[N];
+    Vxx[N]     = costFunction->getcxx()[N];
     dV.setZero();
 
-    for(int i=static_cast<int>(N-1);i>=0;i--)
+    for (int i = static_cast<int>(N-1); i >= 0; i--)
     {
-        Qx = costFunction->getcx()[i] + dynamicModel->getfxList()[i].transpose()*Vx[i+1];
-        Qu = costFunction->getcu()[i] + dynamicModel->getfuList()[i].transpose()*Vx[i+1];
-        Qxx = costFunction->getcxx()[i] + dynamicModel->getfxList()[i].transpose()*(Vxx[i+1])*dynamicModel->getfxList()[i];
-        Quu = costFunction->getcuu()[i] + dynamicModel->getfuList()[i].transpose()*(Vxx[i+1])*dynamicModel->getfuList()[i];
-        Qux = costFunction->getcux()[i] + dynamicModel->getfuList()[i].transpose()*(Vxx[i+1])*dynamicModel->getfxList()[i];
+        Qx = costFunction->getcx()[i]   + dynamicModel->getfxList()[i].transpose() * Vx[i+1];
+        Qu = costFunction->getcu()[i]   + dynamicModel->getfuList()[i].transpose() * Vx[i+1];
+        Qxx = costFunction->getcxx()[i] + dynamicModel->getfxList()[i].transpose() * Vxx[i+1]  * dynamicModel->getfxList()[i];
+        Quu = costFunction->getcuu()[i] + dynamicModel->getfuList()[i].transpose() * Vxx[i+1]  * dynamicModel->getfuList()[i];
+        Qux = costFunction->getcux()[i] + dynamicModel->getfuList()[i].transpose() * Vxx[i+1]  * dynamicModel->getfxList()[i];
 
-        if(Op.regType == 1)
-            QuuF = Quu + Op.lambda*commandMat_t::Identity();
+
+        if (Op.regType == 1)
+        {
+            QuuF = Quu + Op.lambda * commandMat_t::Identity();
+        }
         else
+        {
             QuuF = Quu;
-        
+        }
         
         QuuInv = QuuF.inverse();
 
-        if(!isPositiveDefinite(Quu))
+        if (!isPositiveDefinite(Quu))
         {
-            
             //To be Implemented : Regularization (is Quu definite positive ?)
             TRACE("Quu is not positive definite ");
             if(Op.lambda==0.0) Op.lambda += 1e-4;
@@ -450,7 +457,8 @@ void ILQRSolver::doBackwardPass()
         //         }
         //     }
         // }
-        if(!enableQPBox)
+
+        if (!enableQPBox)
         {
             // Cholesky decomposition by using upper triangular matrix
             // TRACE("Use Cholesky decomposition");
@@ -459,32 +467,34 @@ void ILQRSolver::doBackwardPass()
             // assume QuuF is positive definite
             
             // A temporary solution: check the non-PD case
-            if(lltOfQuuF.info() == Eigen::NumericalIssue)
-                {
-                    diverge = i;
-                    TRACE("Possibly non semi-positive definitie matrix!");
-                    return;
-                }
+            if (lltOfQuuF.info() == Eigen::NumericalIssue)
+            {
+                diverge = i;
+                TRACE("Possibly non semi-positive definitie matrix!");
+                return;
+            }
 
             Eigen::MatrixXd L_inverse = L.inverse();
-            k = - L_inverse*L.transpose().inverse()*Qu;
-            K = - L_inverse*L.transpose().inverse()*Qux;
+            k = - L_inverse * L.transpose().inverse() * Qu;
+            K = - L_inverse * L.transpose().inverse() * Qux;
         }
 
         //update cost-to-go approximation
         dV(0) += k.transpose()*Qu;
         scalar_t c_mat_to_scalar;
-        c_mat_to_scalar = 0.5*k.transpose()*Quu*k;
+        c_mat_to_scalar = 0.5 * k.transpose() * Quu * k;
         dV(1) += c_mat_to_scalar(0,0);
-        Vx[i] = Qx + K.transpose()*Quu*k + K.transpose()*Qu + Qux.transpose()*k;
-        Vxx[i] = Qxx + K.transpose()*Quu*K+ K.transpose()*Qux + Qux.transpose()*K;
-        Vxx[i] = 0.5*(Vxx[i] + Vxx[i].transpose());
+
+        Vx[i]  = Qx  + K.transpose() * Quu * k + K.transpose() * Qu  + Qux.transpose() * k;
+        Vxx[i] = Qxx + K.transpose() * Quu * K + K.transpose() * Qux + Qux.transpose() * K;
+        Vxx[i] = 0.5 * (Vxx[i] + Vxx[i].transpose());
 
         kList[i] = k;
         KList[i] = K;
 
         g_norm_max= 0.0;
-        for(unsigned int j=0; j<commandSize; j++) {
+        for (unsigned int j = 0; j<commandSize; j++) 
+        {
             g_norm_i = fabs(kList[i](j,0)) / (fabs(uList[i](j,0))+1.0);
             if(g_norm_i > g_norm_max) g_norm_max = g_norm_i;
         }

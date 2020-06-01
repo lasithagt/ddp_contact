@@ -13,7 +13,8 @@ using namespace Eigen;
 
 class CostFunctionKukaArm
 {
-	using Jacobian = Eigen::Matrix<double, stateSize, stateSize + commandSize>;
+	using Jacobian = Eigen::Matrix<double, 1, stateSize + commandSize>;
+	using Hessian = Eigen::Matrix<double, 1, stateSize + commandSize>;
 
     template <class T, int S, int C>
     struct Differentiable
@@ -31,17 +32,17 @@ class CostFunctionKukaArm
         int values() const { return ValuesAtCompileTime; }
         int operator()(const Eigen::Ref<const InputType> &xu, Eigen::Ref<ValueType> dx) const
         {
-            dx =  dynamics_(xu.template head<S>(), xu.template tail<C>());
+            dx =  cost_(xu.template head<S>(), xu.template tail<C>());
             return 0;
         }
         /*****************************************************************************/
 
         using DiffFunc = std::function<Eigen::Matrix<T, S, 1>(const Eigen::Matrix<T, S, 1>&, const Eigen::Matrix<T, C, 1>&)>;
-        Differentiable(const DiffFunc &dynamics) : dynamics_(dynamics) {}
+        Differentiable(const DiffFunc &cost) : cost_(cost) {}
         Differentiable() = default;
 
     private:
-        DiffFunc dynamics_;
+        DiffFunc cost_;
     };
 
 public:
