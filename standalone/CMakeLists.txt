@@ -1,11 +1,12 @@
 cmake_minimum_required(VERSION 3.1)
 project(DDP-SQP-ADMM)
+SET (CMAKE_CXX_COMPILER "/usr/bin/clang++")
+
 
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif()
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++")
 
 option(DDP_SYSTEM_EIGEN "Use system-installed version of Eigen" OFF)
 option(DDP_BUILD_EXAMPLES "Build examples" ON)
@@ -35,6 +36,8 @@ endif()
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS "-std=c++11")
+
 
 include_directories(SYSTEM ${EIGEN_INCLUDE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${OROCOS_KDL_INCLUDE_DIR})
@@ -69,9 +72,9 @@ target_include_directories(ddp-contact PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/includ
 target_link_libraries(ddp-contact orocos-kdl ddp-solver kuka-models)
 
 
-add_executable(ddp-admm-contact src/runADMM_softcontact.cc)
-target_include_directories(ddp-admm-contact PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(ddp-admm-contact orocos-kdl ddp-admm-solver kuka-models)
+#add_executable(ddp-admm-contact src/runADMM_softcontact.cc)
+#target_include_directories(ddp-admm-contact PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+#target_link_libraries(ddp-admm-contact orocos-kdl ddp-admm-solver kuka-models)
 
 
 add_executable(ddp-optim src/ddp_main.cpp)
