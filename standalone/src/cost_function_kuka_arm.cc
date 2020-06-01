@@ -229,31 +229,31 @@ void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const c
             c_new += c_mat_to_scalar(0,0); // TODO: to be checked
         }
 
-        cx_new[k] = finite_diff_cx(k, xList[k], uList[k], xList_bar[k]);
-        cu_new[k] = finite_diff_cu(k, xList[k], uList[k], xList_bar[k]);
+        // cx_new[k] = finite_diff_cx(k, xList[k], uList[k], xList_bar[k]);
+        // cu_new[k] = finite_diff_cu(k, xList[k], uList[k], xList_bar[k]);
 
-        // State perturbation for cxx
-        for (unsigned int i = 0; i < n; i++)
-        {
-            cx1 = finite_diff_cx(k, xList[k]+Dx.col(i), uList[k], xList_bar[k]);
-            cxm1 = finite_diff_cx(k, xList[k]-Dx.col(i), uList[k], xList_bar[k]);
-            cxx_new[k].col(i) = (cx1 - cxm1)/(2*delta);
-        }
+        // // State perturbation for cxx
+        // for (unsigned int i = 0; i < n; i++)
+        // {
+        //     cx1 = finite_diff_cx(k, xList[k]+Dx.col(i), uList[k], xList_bar[k]);
+        //     cxm1 = finite_diff_cx(k, xList[k]-Dx.col(i), uList[k], xList_bar[k]);
+        //     cxx_new[k].col(i) = (cx1 - cxm1)/(2*delta);
+        // }
 
-        // Control perturbation for cuu
-        for (unsigned int i = 0; i < m; i++)
-        {
-            cu1 = finite_diff_cu(k, xList[k], uList[k]+Du.col(i), xList_bar[k]);
-            cum1 = finite_diff_cu(k, xList[k], uList[k]-Du.col(i), xList_bar[k]);
-            cuu_new[k].col(i) = (cu1 - cum1)/(2*delta);
-        }
+        // // Control perturbation for cuu
+        // for (unsigned int i = 0; i < m; i++)
+        // {
+        //     cu1 = finite_diff_cu(k, xList[k], uList[k]+Du.col(i), xList_bar[k]);
+        //     cum1 = finite_diff_cu(k, xList[k], uList[k]-Du.col(i), xList_bar[k]);
+        //     cuu_new[k].col(i) = (cu1 - cum1)/(2*delta);
+        // }
 
         // Analytical derivatives given quadratic cost
-        // cx_new[k] = Q*(xList[k]);
-        // cu_new[k] = R*uList[k];
-        // cxx_new[k] = Q;
+        cx_new[k] = Q*(xList[k]);
+        cu_new[k] = R*uList[k];
+        cxx_new[k] = Q;
         // costFunction->getcux()[k].setZero();
-        // cuu_new[k] = R; 
+        cuu_new[k] = R; 
 
         //Note that cu , cux and cuu at the final time step will never be used (see ilqrsolver::doBackwardPass)
         cux_new[k].setZero();

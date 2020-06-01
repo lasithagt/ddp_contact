@@ -36,7 +36,7 @@ void DDP::Run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
     unsigned int N = NumberofKnotPt;
     double tolFun = 1e-5; // 1e-5;//relaxing default value: 1e-10; - reduction exit crieria
     double tolGrad = 1e-10; // relaxing default value: 1e-10; - gradient exit criteria
-    unsigned int iterMax = 100; // 100;
+    unsigned int iterMax = 10; // 100;
 
 
     /* -------------------- orocos kdl robot initialization-------------------------*/
@@ -150,7 +150,7 @@ void DDP::Run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
     }
 
     // robot model
-    KukaArm KukaArmModel(dt, N, kukaRobot, contactModel, fk_ref);
+    KukaArm KukaArmModel(dt, N, kukaRobot, contactModel);
 
     // cost function 
     CostFunctionKukaArm costKukaArm;
@@ -169,11 +169,11 @@ void DDP::Run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
 
 
     gettimeofday(&tbegin, NULL);
-
+    
 
     // Run iLQR 
     // testSolverKukaArm.initializeTraj();
-    solver.solveTrajectory(xinit, u_0, xtrack);
+    solver.solve(xinit, u_0, xtrack);
     
 
     /* ------------------------------------------------------------------- */

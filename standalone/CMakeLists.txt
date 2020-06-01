@@ -67,9 +67,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 #######################################################################################
 
 
-add_executable(ddp-contact src/runddp_softcontact.cc)
-target_include_directories(ddp-contact PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(ddp-contact orocos-kdl ddp-solver kuka-models)
+#add_executable(ddp-contact src/runddp_softcontact.cc)
+#target_include_directories(ddp-contact PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+#target_link_libraries(ddp-contact orocos-kdl ddp-solver kuka-models)
 
 
 #add_executable(ddp-admm-contact src/runADMM_softcontact.cc)
@@ -82,4 +82,6 @@ target_include_directories(ddp-optim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ddp-optim orocos-kdl ddp-solver kuka-models)
 
 
-
+add_executable(mpc-optim src/mpc_main.cpp)
+target_include_directories(mpc-optim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(mpc-optim orocos-kdl ddp-solver kuka-models)

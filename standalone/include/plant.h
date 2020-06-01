@@ -6,30 +6,36 @@
 #include <Eigen/Dense>
 #include <math.h>
 
+#include "config.h"
 #include "KukaModel.h"
 #include "models.h"
+#include "eigenmvn.hpp"
+#include "kuka_arm.h"
 
-
-template<int S, int C>
+template<class Dynamics_, int S, int C>
 class KukaPlant
 {
     enum { StateSize = S, ControlSize = C };
-    using State             = Eigen::Matrix<double, StateSize, 1>;
+    using State             = stateVec_t;
     using Scalar            = double;
-    using Control           = Eigen::Matrix<double, ControlSize, 1>;
-    using StateTrajectory   = Eigen::Matrix<double, StateSize, Eigen::Dynamic>;
-    using ControlTrajectory = Eigen::Matrix<double, ControlSize, Eigen::Dynamic>;
+    using Control           = commandVec_t;
+    using StateTrajectory   = stateVecTab_t;
+    using ControlTrajectory = commandVecTab_t;
+    using Dynamics          = Dynamics_;
+    using StateNoiseVariance    = Eigen::Matrix<Scalar, stateSize, stateSize>;
+    using ControlNoiseVariance  = Eigen::Matrix<Scalar, commandSize, commandSize>;
+    // using Eigen::internal;
 
 public:
-    KukaPlant(std::unique_ptr<KUKAModelKDL>& kukaRobot, Scalar dt, Scalar state_var, Scalar control_var)
-    : kukaRobot__(kukaRobot), dt_(dt), sdist_(State::Zero(), state_var * StateNoiseVariance::Identity()),
+    KukaPlant(Dynamics& kukaRobot, Scalar dt, Scalar state_var, Scalar control_var)
+    : kukaRobot_(kukaRobot), dt_(dt), sdist_(State::Zero(), state_var * StateNoiseVariance::Identity()),
       cdist_(Control::Zero(), control_var * ControlNoiseVariance::Identity()) {}
 
     KukaPlant() = default;
-    KukaPlant(const Plant &other) = default;
-    KukaPlant(Plant &&other) = default;
-    KukaPlant& operator=(const Plant &other) = default;
-    KukaPlant& operator=(Plant &&other) = default;
+    KukaPlant(const KukaPlant &other) = default;
+    KukaPlant(KukaPlant &&other) = default;
+    KukaPlant& operator=(const KukaPlant &other) = default;
+    KukaPlant& operator=(KukaPlant &&other) = default;
     ~KukaPlant() = default;
 
 
@@ -48,9 +54,18 @@ public:
      * @param u The control calculated by the optimizer for the current time window.
      * @return  The new state of the system.
      */
-    State f(const Eigen::Ref<const State> &x, const Eigen::Ref<const Control> &u);
+    State f(const Eigen::Ref<const State> &x, const Eigen::Ref<const Control> &u)
+    {
+        commandVec_t u_noisy = u + cdist_.samples(1);
+
+        stateVec_t xnew = x + kukaRobot_.kuka_arm_dynamics(x, u_noisy) * dt_ + sdist_.samples(1);
+        // Eigen::Map<State>(sx.data(), StateSize) = xnew;
+        // Eigen::Map<Control>(su.data(), ControlSize) = u_noisy;
+        return xnew;
+    }
+    
 private:
-    std::unique_ptr<KUKAModelKDL> kukaRobot_;
+    Dynamics& kukaRobot_;
     Scalar dt_;
     Eigen::EigenMultivariateNormal<double, StateSize> sdist_;
     Eigen::EigenMultivariateNormal<double, ControlSize> cdist_;

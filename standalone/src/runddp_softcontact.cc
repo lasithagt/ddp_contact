@@ -204,7 +204,7 @@ class RobotPlanRunner
           u_0[i].head(7) = gravityTorque;
         }
 
-        KukaArm KukaArmModel(dt, N, kukaRobot, contactModel, fk_ref);
+        KukaArm KukaArmModel(dt, N, kukaRobot, contactModel);
 
         /* -------------------- Optimizer Params ------------------------ */
         optimizer::ILQRSolver::OptSet solverOptions;
@@ -228,7 +228,7 @@ class RobotPlanRunner
     for (unsigned int i = 0; i < Num_run; i++) 
     {
       // testSolverKukaArm.initializeTraj();
-      testSolverKukaArm.solveTrajectory(xinit, u_0, xtrack);
+      testSolverKukaArm.solve(xinit, u_0, xtrack);
     }
 
     gettimeofday(&tend,NULL);

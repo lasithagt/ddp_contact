@@ -2,7 +2,9 @@
 #include <Eigen/Geometry>
 
 
-KukaArm::KukaArm(double& iiwa_dt, unsigned int& iiwa_N, std::unique_ptr<KUKAModelKDL>& kukaRobot, ContactModel::SoftContactModel& contact_model, std::vector<Eigen::Matrix<double,6,1> >& iiwa_fk_ref)
+KukaArm::KukaArm(double& iiwa_dt, unsigned int& iiwa_N, std::unique_ptr<KUKAModelKDL>& kukaRobot, ContactModel::SoftContactModel& contact_model) 
+: diff_([this](const stateVec_t& x, const commandVec_t& u) -> stateVec_t{ return this->kuka_arm_dynamics(x, u); }),
+      num_diff_(diff_) 
 {
     //#####
     globalcnt = 0;
@@ -26,8 +28,6 @@ KukaArm::KukaArm(double& iiwa_dt, unsigned int& iiwa_N, std::unique_ptr<KUKAMode
     fxList.resize(N);
     fuList.resize(N);
 
-    // initialize reference cartesian trajectory
-    fk_ref = iiwa_fk_ref;
     
     contact_model0 = &contact_model;
 
@@ -37,26 +37,6 @@ KukaArm::KukaArm(double& iiwa_dt, unsigned int& iiwa_N, std::unique_ptr<KUKAMode
     Bu.setZero();
     Xdot_new.setZero();
 
-
-    A1.setZero();
-    A2.setZero();
-    A3.setZero();
-    A4.setZero();
-    B1.setZero();
-    B2.setZero();
-    B3.setZero();
-    B4.setZero();
-    IdentityMat.setIdentity();
-
-    Xp1.setZero();
-    Xp2.setZero();
-    Xp3.setZero();
-    Xp4.setZero();
-
-    Xm1.setZero();
-    Xm2.setZero();
-    Xm3.setZero();
-    Xm4.setZero();
     
     debugging_print = 0;
     finalTimeProfile.counter0_ = 0;
@@ -67,12 +47,6 @@ KukaArm::KukaArm(double& iiwa_dt, unsigned int& iiwa_N, std::unique_ptr<KUKAMode
     q.resize(stateSize/2);
     qd.resize(stateSize/2);
 
-    // q_thread.resize(NUMBER_OF_THREAD);
-    // qd_thread.resize(NUMBER_OF_THREAD);
-    // for(unsigned int i=0;i<NUMBER_OF_THREAD;i++){
-    //     q_thread[i].resize(stateSize/2);
-    //     qd_thread[i].resize(stateSize/2);
-    // }
 
     finalTimeProfile.time_period1 = 0;
     finalTimeProfile.time_period2 = 0;
@@ -167,100 +141,17 @@ void KukaArm::compute_dynamics_jacobian(const stateVecTab_t& xList, const comman
 
     for (unsigned int k=0; k < Nl-1; k++) 
     {
-        update_fxu(xList[k], uList[k], fx_, fu_); //assume three outputs, code needs to be optimized
-
-        fxList[k] = fx_;
-        fuList[k] = fu_; 
-
         /* Numdiff Eigen */
-        // num_diff_.df((typename Differentiable<double, stateSize, commandSize>::InputType() << xList[k], uList[k]).finished(), j_);
-        // fxList = j_;
-        // fuList = j_;
+        num_diff_.df((typename Differentiable<double, stateSize, commandSize>::InputType() << xList.at(k), uList.at(k)).finished(), j_);
+
+        fxList[k] = j_.leftCols(stateSize)*dt + Eigen::Matrix<double, stateSize, stateSize>::Identity();
+        fuList[k] = j_.rightCols(commandSize)*dt;
     }
 
     
     if(debugging_print) TRACE_KUKA_ARM("finish kuka_arm_dyn_cst\n");
 }
 
-
-void KukaArm::update_fxu(const stateVec_t& X, const commandVec_t& U, stateMat_t& A, stateR_commandC_t& B)
-{
-    // 4th-order Runge-Kutta step
-    if(debugging_print) TRACE_KUKA_ARM("update: 4th-order Runge-Kutta step\n");
-
-    gettimeofday(&tbegin_period4, NULL);
-
-    // output of kuka arm dynamics is xdot = f(x,u)
-    Xdot1 = kuka_arm_dynamics(X, U);
-    Xdot2 = kuka_arm_dynamics(X + 0.5*dt*Xdot1, U);
-    Xdot3 = kuka_arm_dynamics(X + 0.5*dt*Xdot2, U);
-    Xdot4 = kuka_arm_dynamics(X + dt*Xdot3, U);
-
-    if(debugging_print) TRACE_KUKA_ARM("update: X_new\n");
-
-
-    unsigned int n = X.size();
-    unsigned int m = U.size();
-
-    double delta = 1e-7;
-    stateMat_t Dx;
-    commandMat_t Du;
-    Dx.setIdentity();
-    Dx = delta*Dx;
-    Du.setIdentity();
-    Du = delta*Du;
-
-    // State perturbation?
-    for (unsigned int i = 0; i < n; i++)
-    {
-        Xp1 = kuka_arm_dynamics(X+Dx.col(i),U);
-        Xm1 = kuka_arm_dynamics(X-Dx.col(i),U);
-        A1.col(i) = (Xp1 - Xm1)/(2*delta);
-
-        Xp2 = kuka_arm_dynamics(X+0.5*dt*Xdot1+Dx.col(i),U);
-        Xm2 = kuka_arm_dynamics(X+0.5*dt*Xdot1-Dx.col(i),U);
-        A2.col(i) = (Xp2 - Xm2)/(2*delta);
-
-        Xp3 = kuka_arm_dynamics(X+0.5*dt*Xdot2+Dx.col(i),U);
-        Xm3 = kuka_arm_dynamics(X+0.5*dt*Xdot2-Dx.col(i),U);
-        A3.col(i) = (Xp3 - Xm3)/(2*delta);
-
-        Xp4 = kuka_arm_dynamics(X+dt*Xdot3+Dx.col(i),U);
-        Xm4 = kuka_arm_dynamics(X+dt*Xdot3-Dx.col(i),U);
-
-        A4.col(i) = (Xp4 - Xm4)/(2*delta);
-    }
-
-    // Control perturbation?
-    for (unsigned int i = 0; i < m ; i++)
-    {
-        Xp1 = kuka_arm_dynamics(X,U+Du.col(i));
-        Xm1 = kuka_arm_dynamics(X,U-Du.col(i));
-        B1.col(i) = (Xp1 - Xm1)/(2*delta);
-
-        Xp2 = kuka_arm_dynamics(X+0.5*dt*Xdot1,U+Du.col(i));
-        Xm2 = kuka_arm_dynamics(X+0.5*dt*Xdot1,U-Du.col(i));
-        B2.col(i) = (Xp2 - Xm2)/(2*delta);
-
-        Xp3 = kuka_arm_dynamics(X+0.5*dt*Xdot2,U+Du.col(i));
-        Xm3 = kuka_arm_dynamics(X+0.5*dt*Xdot2,U-Du.col(i));
-        B3.col(i) = (Xp3 - Xm3)/(2*delta);
-
-        Xp4 = kuka_arm_dynamics(X+dt*Xdot3,U+Du.col(i));
-        Xm4 = kuka_arm_dynamics(X+dt*Xdot3,U-Du.col(i));
-
-        B4.col(i) = (Xp4 - Xm4)/(2*delta);
-    }
-
-    A = (IdentityMat + A4 * dt/6)*(IdentityMat + A3 * dt/3)*(IdentityMat + A2 * dt/3)*(IdentityMat + A1 * dt/6);
-    B = B4 * dt/6 + (IdentityMat + A4 * dt/6) * B3 * dt/3 + (IdentityMat + A4 * dt/6)*(IdentityMat + A3 * dt/3)* B2 * dt/3 + (IdentityMat + (dt/6)*A4)*(IdentityMat + (dt/3)*A3)*(IdentityMat + (dt/3)*A2)*(dt/6)*B1;
-    
-
-    if(debugging_print) TRACE_KUKA_ARM("update: X_new\n");
-
-    gettimeofday(&tend_period4,NULL);
-    finalTimeProfile.time_period4 += (static_cast<double>(1000.0*(tend_period4.tv_sec-tbegin_period4.tv_sec)+((tend_period4.tv_usec-tbegin_period4.tv_usec)/1000.0)))/1000.0;
-}
 
 
 unsigned int KukaArm::getStateNb()

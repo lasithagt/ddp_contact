@@ -13,6 +13,38 @@ using namespace Eigen;
 
 class CostFunctionKukaArm
 {
+	using Jacobian = Eigen::Matrix<double, 1, stateSize + commandSize>;
+	using Hessian = Eigen::Matrix<double, 1, stateSize + commandSize>;
+
+    template <class T, int S, int C>
+    struct Differentiable
+    {
+        /*****************************************************************************/
+        /*** Replicate Eigen's generic functor implementation to avoid inheritance ***/
+        /*** We only use the fixed-size functionality ********************************/
+        /*****************************************************************************/
+        enum { InputsAtCompileTime = S + C, ValuesAtCompileTime = S };
+        using Scalar        = T;
+        using InputType     = Eigen::Matrix<T, InputsAtCompileTime, 1>;
+        using ValueType     = Eigen::Matrix<T, ValuesAtCompileTime, 1>;
+        using JacobianType  = Eigen::Matrix<T, ValuesAtCompileTime, InputsAtCompileTime>;
+        int inputs() const { return InputsAtCompileTime; }
+        int values() const { return ValuesAtCompileTime; }
+        int operator()(const Eigen::Ref<const InputType> &xu, Eigen::Ref<ValueType> dx) const
+        {
+            dx =  cost_(xu.template head<S>(), xu.template tail<C>());
+            return 0;
+        }
+        /*****************************************************************************/
+
+        using DiffFunc = std::function<Eigen::Matrix<T, S, 1>(const Eigen::Matrix<T, S, 1>&, const Eigen::Matrix<T, C, 1>&)>;
+        Differentiable(const DiffFunc &cost) : cost_(cost) {}
+        Differentiable() = default;
+
+    private:
+        DiffFunc cost_;
+    };
+
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
