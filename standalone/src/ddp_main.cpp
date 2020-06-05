@@ -34,6 +34,15 @@ int main(int argc, char *argv[])
   } 
 
 
+  KUKAModelKDLInternalData robotParams;
+  robotParams.numJoints = 7;
+  robotParams.Kv = Eigen::MatrixXd(7,7);
+  robotParams.Kp = Eigen::MatrixXd(7,7);
+
+  /* initialize xinit, xgoal, xtrack - for the hozizon*/
+  KDL::Chain robot = KDL::KukaDHKdl();
+  std::unique_ptr<KUKAModelKDL> kukaRobot = std::unique_ptr<KUKAModelKDL>(new KUKAModelKDL(robot, robotParams));
+
   /* initialize xinit, xgoal, xtrack - for the hozizon*/
 	optimizer.Run(xinit, xgoal, xtrack);
 

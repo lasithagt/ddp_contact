@@ -29,7 +29,6 @@
 
 #include <Eigen/Dense>
 
-
 #include "config.h"
 #include "spline.h"
 #include "ilqrsolver.h"
@@ -50,7 +49,7 @@ public:
     ~MPC() {}
 
     /* -------------------- Soft_contact_state = 17(14+3) ------------------------*/
-    void run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack) 
+    void run(stateVec_t xinit, stateVec_t xgoal, const stateVecTab_t &xtrack) 
     {
         struct timeval tbegin,tend;
         double texec = 0.0;
@@ -59,8 +58,8 @@ public:
         unsigned int N = NumberofKnotPt;
         double tolFun = 1e-5; // 1e-5;//relaxing default value: 1e-10; - reduction exit crieria
         double tolGrad = 1e-10; // relaxing default value: 1e-10; - gradient exit criteria
-        unsigned int iterMax = 100; // 100;
-
+        unsigned int iterMax = 10; // 100;
+        Logger* logger = new DefaultLogger();
 
         /* -------------------- orocos kdl robot initialization-------------------------*/
         KUKAModelKDLInternalData robotParams;
@@ -107,7 +106,7 @@ public:
 
 
 
-        /*-----------------------------initial cartesian poses----------------------------------------------*/
+        // /*-----------------------------initial cartesian poses----------------------------------------------*/
         Eigen::Matrix<double,6,1> fkinit, fkgoal, fkstep;
 
         Eigen::Matrix<double,3,3> poseM;
@@ -211,7 +210,25 @@ public:
         /* ---------------------------- MPC ----------------------------------- */
 
         // Initialize receding horizon controller
-        // ModelPredictiveController<KukaArm, optimizer::ILQRSolver> mpc(dt, time_steps, max_iterations, verbose);
+        bool verbose = true;
+        using Plant = KukaPlant<KukaArm, stateSize, commandSize>;
+        using Optimizer = optimizer::ILQRSolver;
+        using Result = optimizer::ILQRSolver::traj;
+
+
+
+        ModelPredictiveController<KukaArm, Plant, CostFunctionKukaArm, Optimizer, Result> mpc(dt, N, 10, verbose, logger, KukaArmModel, costKukaArm, solver, xtrack) ;
+
+        // termination condition
+        using StateRef = Eigen::Ref<const stateVec_t>;
+        auto termination =
+        [&](int i, const StateRef &x)
+        {
+            return 0;
+        };
+
+
+        mpc.run(xinit, u_0, KukaModelPlant, termination);
 
         // Connect signals and configure plot window
 
@@ -283,6 +300,8 @@ public:
 
         cout << "-------- DDP Trajectory Generation Finished! --------" << endl;
 
+        delete(logger);
+
     }
 private:
     stateVecTab_t joint_state_traj;
@@ -314,7 +333,6 @@ int main(int argc, char *argv[])
     } 
 
 
-  /* initialize xinit, xgoal, xtrack - for the hozizon*/
     optimizer.run(xinit, xgoal, xtrack);
 
 

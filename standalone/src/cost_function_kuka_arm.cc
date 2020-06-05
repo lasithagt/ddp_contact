@@ -202,7 +202,7 @@ void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const c
     double delta = 1e-5;
     commandMat_t Du;
     Du.setIdentity();
-    Du = delta*Du;
+    Du = delta * Du;
 
     stateMat_t Dx;
     Dx.setIdentity();
@@ -249,9 +249,10 @@ void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const c
         // }
 
         // Analytical derivatives given quadratic cost
-        cx_new[k] = Q*(xList[k]);
-        cu_new[k] = R*uList[k];
+        cx_new[k] = Q * (xList[k]);
+        cu_new[k] = R * uList[k];
         cxx_new[k] = Q;
+
         // costFunction->getcux()[k].setZero();
         cuu_new[k] = R; 
 
@@ -272,52 +273,3 @@ void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const c
 }
 
 
-Eigen::Matrix<double,6,6>& CostFunctionKukaArm::getT()
-{
-    return T;
-}
-
-stateMat_t& CostFunctionKukaArm::getQ()
-{
-    return Q;
-}
-
-stateMat_t& CostFunctionKukaArm::getQf()
-{
-    return Qf;
-}
-
-commandMat_t& CostFunctionKukaArm::getR()
-{
-    return R;
-}
-
-stateVecTab_t& CostFunctionKukaArm::getcx()
-{
-    return cx_new;
-}
-
-commandVecTab_t& CostFunctionKukaArm::getcu()
-{
-    return cu_new;
-}
-
-stateMatTab_t& CostFunctionKukaArm::getcxx()
-{
-    return cxx_new;
-}
-
-commandR_stateC_tab_t& CostFunctionKukaArm::getcux()
-{
-    return cux_new;
-}
-
-commandMatTab_t& CostFunctionKukaArm::getcuu()
-{
-    return cuu_new;
-}
-
-double& CostFunctionKukaArm::getc()
-{
-    return c_new;
-}

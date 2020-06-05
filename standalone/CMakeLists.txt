@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 project(DDP-SQP-ADMM)
-SET (CMAKE_CXX_COMPILER "/usr/bin/clang++")
+SET (CMAKE_CXX_COMPILER "/usr/bin/g++")
 
 
 if(NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
@@ -28,6 +28,7 @@ find_package(OROCOS_KDL)
 if (OROCOS_KDL)
 endif()
 
+# set(OROCOS_KDL_INCLUDE_DIR ${OROCOS_KDL_INCLUDE_DIR})
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -40,8 +41,9 @@ set(CMAKE_CXX_FLAGS "-std=c++11")
 
 
 include_directories(SYSTEM ${EIGEN_INCLUDE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${OROCOS_KDL_INCLUDE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${OROCOS_KDL_INCLUDE_DIR} /usr/local/include)
 
+message(STATUS ${OROCOS_KDL_INCLUDE_DIR})
 
 add_library(kuka-models STATIC)
 target_include_directories(kuka-models PUBLIC include)

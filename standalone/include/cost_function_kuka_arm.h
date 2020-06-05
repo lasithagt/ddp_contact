@@ -57,16 +57,25 @@ public:
 
     void computeDerivatives(const stateVecTab_t& xList, const commandVecTab_t& uList, const stateVecTab_t& xList_bar);
 
-	Eigen::Matrix<double,6,6>& getT();
-	stateMat_t& getQ();
-	stateMat_t& getQf();
-	commandMat_t& getR();
-	stateVecTab_t& getcx();
-	commandVecTab_t& getcu();
-	stateMatTab_t& getcxx();
-	commandR_stateC_tab_t& getcux();
-	commandMatTab_t& getcuu();
-	double& getc();
+	const Eigen::Matrix<double,6,6>& getT() const {return T;};
+
+	const stateMat_t& getQ() const {return Q;};
+
+	const stateMat_t& getQf() const {return Qf;};
+
+	const commandMat_t& getR() const {return R;};
+
+	const stateVecTab_t& getcx() const {return cx_new;};
+
+	const commandVecTab_t& getcu() const {return cu_new;};
+
+	const stateMatTab_t& getcxx() const {return cxx_new;};
+
+	const commandR_stateC_tab_t& getcux() const {return cux_new;};
+
+	const commandMatTab_t& getcuu() const {return cuu_new;};
+
+	const double& getc() const {return c_new;};
 
 	unsigned int N;
 
@@ -101,6 +110,8 @@ protected:
 	commandR_stateC_tab_t cux_new; 
 	commandMatTab_t cuu_new;
 	double c_new;
+
+    stateVecTab_t x_track;
 
 };
 

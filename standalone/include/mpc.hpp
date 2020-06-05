@@ -34,10 +34,6 @@
 #include <string>
 #include <list>
 #include <chrono>
-// #include "mpc.h"
-
-// using namespace std;
-// using namespace Eigen;
 
 
 /* DDP trajectory generation */
@@ -54,11 +50,10 @@ class ModelPredictiveController
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
+    using Scalar                = double;            ///< Type of scalar used by the optimizer
     using Optimizer             = OptimizerT;
     using Dynamics 				= DynamicsT;
     using CostFunction   		= costFunctionT;
-    using Scalar                = double;            ///< Type of scalar used by the optimizer
     using State                 = stateVec_t;            
     using Control               = commandVec_t;           
     using StateTrajectory       = stateVecTab_t;   
@@ -71,12 +66,14 @@ public:
     static const int MPC_BAD_CONTROL_TRAJECTORY = -1;
     Optimizer opt_;
     Dynamics& dynamics_;
-    Plant& plant_;
+    // Plant& plant_;
     CostFunction& cost_function_;
     bool verbose_;
     Scalar dt_;
     int H_;
+    Logger* logger_;
     ControlTrajectory control_trajectory;
+    StateTrajectory x_track_;
 
 public:
     /**
@@ -88,13 +85,15 @@ public:
      * @param verbose       True if informational and warning messages should be passed to the logger; error messages are always passed
      * @param args          Arbitrary arguments to pass to the trajectory optimizer at initialization time
      */
-    ModelPredictiveController(Scalar dt, int time_steps, int iterations, bool verbose, 
+    ModelPredictiveController(Scalar dt, int time_steps, int iterations, bool verbose, Logger *logger,
     		 Dynamics                       &dynamics,
 	         CostFunction                   &cost_function,
-	         Optimizer 						&opt)
-    : opt_(opt), dt_(dt), H_(time_steps), verbose_(verbose), dynamics_(dynamics), cost_function_(cost_function)  
+	         Optimizer 						&opt,
+	         const StateTrajectory  		&x_track)
+    : dt_(dt), H_(time_steps), verbose_(verbose), dynamics_(dynamics), cost_function_(cost_function), opt_(opt), x_track_(x_track)  
     {
-    	control_trajectory.resize(H_-1);
+    	logger_ = logger;
+    	control_trajectory.resize(H_);
     }
 
     /**
@@ -108,16 +107,16 @@ public:
      * @param terminal_cost_function        Terminal cost function V(xN) to pass to the optimizer
      * @param args                          Arbitrary arguments to pass to the trajectory optimizer at run time
      */
-    template <typename TerminationCondition, typename Plant>
+    template <typename TerminationCondition>
 	void run(const Eigen::Ref<const State>  &initial_state,
 	         ControlTrajectory              initial_control_trajectory,
-	         Plant                          &plant,
+	         Plant                          &plant_,
 	         TerminationCondition           &terminate)
 	         // TerminalCostFunction           &terminal_cost_function)
 	{
 	    if(initial_control_trajectory.size() != H_)
 	    {
-	        // logger_->error("The size of the control trajectory does not match the number of time steps passed to the optimizer!");
+	        logger_->error("The size of the control trajectory does not match the number of time steps passed to the optimizer!");
 	        std::exit(MPC_BAD_CONTROL_TRAJECTORY);
 	    }
 
@@ -126,7 +125,7 @@ public:
 	    // Scalar true_cost = cost_function.c(xold, initial_control_trajectory[0]);
 	    stateVec_t x_track;
 	    x_track.setZero();
-	    scalar_t true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory[0], x_track);
+	    scalar_t true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory[0], x_track_[0]);
 	    
 	    // OptimizerResult<Dynamics> result;
 	    Result result;
@@ -144,41 +143,46 @@ public:
 	            {
 	                end = std::chrono::high_resolution_clock::now();
 	                elapsed = end - start;
-	                // logger_->info("Completed MPC loop for time step %d in %d ms\n", i - 1, static_cast<int>(elapsed.count()));
+	                logger_->info("Completed MPC loop for time step %d in %d ms\n", i - 1, static_cast<int>(elapsed.count()));
 	            }
-	            // logger_->info("Entered MPC loop for time step %d\n", i);
+	            logger_->info("Entered MPC loop for time step %d\n", i);
 	            start = std::chrono::high_resolution_clock::now();
 	        }
 
 	        // Run the optimizer to obtain the next control
-	        opt_.solve(xold, control_trajectory);
+	        opt_.solve(xold, control_trajectory, x_track_);
 	        result = opt_.getLastSolvedTrajectory();
 
-	        u = result.control_trajectory.col(0);
+	        u = result.uList[0];
 	        if(verbose_)
 	        {
-	            // logger_->info("Obtained control from optimizer: ");
-	            // for(int m = 0; m < u.rows(); ++m) { logger_->info("%f ", u(m)); }
-	            // logger_->info("\n");
+	            logger_->info("Obtained control from optimizer: ");
+	            for(int m = 0; m < u.rows(); ++m) { logger_->info("%f ", u(m)); }
+	            logger_->info("\n");
 	        }
 
 	        // Apply the control to the plant and obtain the new state
 	        x = plant_.f(xold, u);
 	        if(verbose_)
 	        {
-	            // logger_->info("Received new state from plant: ");
-	            // for(int n = 0; n < x.rows(); ++n) { logger_->info("%f ", x(n)); }
-	            // logger_->info("\n");
+	            logger_->info("Received new state from plant: ");
+	            for(int n = 0; n < x.rows(); ++n) { logger_->info("%f ", x(n)); }
+	            logger_->info("\n");
 	        }
 
 	        // Calculate the true cost for this time step
-	        true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory[0], x_track);
+	        true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory[0], x_track_[0]);
 
-	        // if(verbose_) logger_->info("True cost for time step %d: %f\n", i, true_cost);
+	        if(verbose_) logger_->info("True cost for time step %d: %f\n", i, true_cost(0,0));
 
 	        // Slide down the control trajectory
-	        // control_trajectory.leftCols(H_ - 1) = result.control_trajectory.rightCols(H_ - 1);
-	        // if(verbose_) logger_->info("Slide down the control trajectory\n");
+	        for (int i = 0; i < H_; i++)
+	        {
+	        	control_trajectory[i] = result.uList[i + 1];
+	        }
+
+	        // control_trajectory.leftCols(H_ - 1) = result.uList.rightCols(H_ - 1);
+	        if(verbose_) logger_->info("Slide down the control trajectory\n");
 
 	        xold = x;
 	        ++i;
