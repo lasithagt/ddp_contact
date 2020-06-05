@@ -358,16 +358,16 @@ void ILQRSolver::doForwardPass(const stateVec_t& x_0, const stateVecTab_t& x_tra
 
     for (unsigned int i = 0; i < N; i++) 
     {
-        updateduList[i] = uList[i] + alpha*kList[i] + KList[i]*(updatedxList[i]-xList[i]);
+        updateduList.col(i)   = uList.col(i) + alpha*kList[i] + KList[i]*(updatedxList.col(i)-xList.col(i));
 
-        c_mat_to_scalar = costFunction->cost_func_expre(i, updatedxList[i], updateduList[i], x_track[i]);
-        costListNew[i] = c_mat_to_scalar(0,0);
+        c_mat_to_scalar       = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i), x_track.col(i));
+        costListNew.col(i)    = c_mat_to_scalar;
 
-        updatedxList[i+1] = forward_integration(updatedxList[i], updateduList[i]);
+        updatedxList.col(i+1) = forward_integration(updatedxList.col(i), updateduList.col(i));
 
     }
-    c_mat_to_scalar = costFunction->cost_func_expre(N, updatedxList[N], u_NAN_loc, x_track[N]);
-    costListNew[N] = c_mat_to_scalar(0,0);
+    c_mat_to_scalar = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc, x_track.col(N));
+    costListNew[N]  = c_mat_to_scalar(0,0);
 }
 
 /* 4th-order Runge-Kutta step */

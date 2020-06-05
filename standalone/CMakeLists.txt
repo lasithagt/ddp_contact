@@ -84,6 +84,6 @@ target_include_directories(ddp-optim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ddp-optim orocos-kdl ddp-solver kuka-models)
 
 
-add_executable(mpc-optim src/mpc_main.cpp)
-target_include_directories(mpc-optim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(mpc-optim orocos-kdl ddp-solver kuka-models)
+#add_executable(mpc-optim src/mpc_main.cpp)
+#target_include_directories(mpc-optim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+#target_link_libraries(mpc-optim orocos-kdl ddp-solver kuka-models)
