@@ -153,12 +153,14 @@ private:
 
 public:
     ILQRSolver(KukaArm& DynamicModel, CostFunctionKukaArm& CostFunction, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox);
-    void solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const stateVecTab_t& x_track);
-    void initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0, const stateVecTab_t& x_track);
+    void solve(const stateVec_t& x_0, const commandVecTab_t& u_0);
+    void initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0);
     struct traj getLastSolvedTrajectory();
+
+private:
     inline stateVec_t forward_integration(const stateVec_t& X, const commandVec_t& U);
     void doBackwardPass();
-    void doForwardPass(const stateVec_t& x_0, const stateVecTab_t& x_track);
+    void doForwardPass(const stateVec_t& x_0);
     bool isPositiveDefinite(const commandMat_t & Quu); 
 };
 

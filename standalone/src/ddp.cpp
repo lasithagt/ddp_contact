@@ -151,7 +151,7 @@ void DDP::Run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
     KukaArm KukaArmModel(dt, N, kukaRobot, contactModel);
 
     // cost function 
-    CostFunctionKukaArm costKukaArm;
+    CostFunctionKukaArm costKukaArm(xgoal, xtrack);
 
 
     /* -------------------- Optimizer Params ------------------------ */
@@ -171,7 +171,7 @@ void DDP::Run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
 
     // Run iLQR 
     // testSolverKukaArm.initializeTraj();
-    solver.solve(xinit, u_0, xtrack);
+    solver.solve(xinit, u_0);
     
 
     /* ------------------------------------------------------------------- */

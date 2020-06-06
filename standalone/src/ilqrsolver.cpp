@@ -68,13 +68,8 @@ ILQRSolver::ILQRSolver(KukaArm& iiwaDynamicModel, CostFunctionKukaArm& iiwaCostF
         Vxx[i].setZero();
     }
 
-    // xList[N].setZero();
-    // uListFull[N].setZero();
-    // updatedxList[N].setZero();
     costList[N] = 0;
     costListNew[N] = 0;
-    // FList[N].setZero();
-    // Vx[N].setZero();
     Vxx[N].setZero();
     
     k.setZero();
@@ -90,18 +85,18 @@ ILQRSolver::ILQRSolver(KukaArm& iiwaDynamicModel, CostFunctionKukaArm& iiwaCostF
 
 }
 
-void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const stateVecTab_t& x_track)
+void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0)
 {
     //==============
     // Checked!!v
     //==============
 
-    initializeTraj(x_0, u_0, x_track);
+    initializeTraj(x_0, u_0);
 
     Op.lambda = Op.lambdaInit;
     Op.dlambda = Op.dlambdaInit;
     
-    // TODO: update multipliers
+    // TODO: update multipliers 
 
     for (iter = 0; iter < Op.max_iter; iter++)
     {
@@ -131,7 +126,7 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const 
             
 
             /* -------------- compute cx, cu, cxx, cuu ------------ */
-            costFunction->computeDerivatives(xList, uListFull, x_track);
+            costFunction->computeDerivatives(xList, uListFull);
 
             gettimeofday(&tend_time_deriv,NULL);
             Op.time_derivative(iter) = (static_cast<double>(1000*(tend_time_deriv.tv_sec-tbegin_time_deriv.tv_sec)+((tend_time_deriv.tv_usec-tbegin_time_deriv.tv_usec)/1000)))/1000.0;
@@ -186,7 +181,7 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const 
             for (int alpha_index = 0; alpha_index < Op.alphaList.size(); alpha_index++)
             {
                 alpha = Op.alphaList[alpha_index];
-                doForwardPass(x_0, x_track);
+                doForwardPass(x_0);
                 Op.dcost = accumulate(costList.begin(), costList.end(), 0.0) - accumulate(costListNew.begin(), costListNew.end(), 0.0);
                 Op.expected = -alpha*(dV(0) + alpha*dV(1));
 
@@ -285,7 +280,7 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const 
     }
 }
 
-void ILQRSolver::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0, const stateVecTab_t& x_track)
+void ILQRSolver::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0)
 {
     xList.col(0) = x_0;
     commandVec_t zeroCommand;
@@ -314,12 +309,12 @@ void ILQRSolver::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_
     {
         updateduList.col(i)     = uList.col(i);
 
-        c_mat_to_scalar         = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i), x_track.col(i));
+        c_mat_to_scalar         = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i));
         updatedxList.col(i + 1) = forward_integration(updatedxList.col(i), updateduList.col(i));
         costList[i]             = c_mat_to_scalar(0,0);
     }
     // getting final cost, state, input=NaN
-    c_mat_to_scalar = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc, x_track.col(N));
+    c_mat_to_scalar = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc);
     costList[N] = c_mat_to_scalar(0,0);
 
 
@@ -353,7 +348,7 @@ void ILQRSolver::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_
     if(Op.debug_level > 0) {TRACE("\n =========== begin iLQR =========== \n");}
 }
 
-void ILQRSolver::doForwardPass(const stateVec_t& x_0, const stateVecTab_t& x_track)
+void ILQRSolver::doForwardPass(const stateVec_t& x_0)
 {
 
     updatedxList.col(0) = x_0;
@@ -367,12 +362,12 @@ void ILQRSolver::doForwardPass(const stateVec_t& x_0, const stateVecTab_t& x_tra
     for (unsigned int i = 0; i < N; i++) 
     {
         updateduList.col(i)     = uList.col(i) + alpha * kList.col(i) + KList[i] * (updatedxList.col(i) - xList.col(i));
-        c_mat_to_scalar         = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i), x_track.col(i));
+        c_mat_to_scalar         = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i));
         costListNew[i]          = c_mat_to_scalar(0,0);
         updatedxList.col(i + 1) = forward_integration(updatedxList.col(i), updateduList.col(i));
     }
 
-    c_mat_to_scalar = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc, x_track.col(N));
+    c_mat_to_scalar = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc);
     costListNew[N]  = c_mat_to_scalar(0,0);
 }
 

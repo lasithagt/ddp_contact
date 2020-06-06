@@ -48,14 +48,14 @@ class CostFunctionKukaArm
 public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    CostFunctionKukaArm();
+    CostFunctionKukaArm(const stateVec_t &x_goal, const stateVecTab_t &x_track);
     scalar_t forwardkin_cost(stateVec_t x, commandVec_t u, Eigen::Matrix<double,6,1> fkgoal, unsigned int last);
-    scalar_t cost_func_expre(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k);
+    scalar_t cost_func_expre(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k);
 
-	stateVec_t finite_diff_cx(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k);
-	commandVec_t finite_diff_cu(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k);
+	stateVec_t finite_diff_cx(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k);
+	commandVec_t finite_diff_cu(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k);
 
-    void computeDerivatives(const stateVecTab_t& xList, const commandVecTab_t& uList, const stateVecTab_t& xList_bar);
+    void computeDerivatives(const stateVecTab_t& xList, const commandVecTab_t& uList);
 
 	const Eigen::Matrix<double,6,6>& getT() const {return T;};
 
@@ -111,7 +111,7 @@ protected:
 	commandMatTab_t cuu_new;
 	double c_new;
 
-    stateVecTab_t x_track;
+    stateVecTab_t x_track_;
 
 };
 

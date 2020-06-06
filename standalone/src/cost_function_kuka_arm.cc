@@ -2,7 +2,7 @@
 
 
 // TODO : incoperate x_track into 
-CostFunctionKukaArm::CostFunctionKukaArm()
+CostFunctionKukaArm::CostFunctionKukaArm(const stateVec_t &x_goal, const stateVecTab_t &x_track) : x_track_(x_track)
 {    
     if (SOFT_CONTACT)
     {
@@ -130,24 +130,25 @@ scalar_t CostFunctionKukaArm::forwardkin_cost(stateVec_t x, commandVec_t u, Eige
 
 }
 
-scalar_t CostFunctionKukaArm::cost_func_expre(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k)
+scalar_t CostFunctionKukaArm::cost_func_expre(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k)
 {
     scalar_t c_mat_to_scalar;
     unsigned int Nl = NumberofKnotPt;
+
     if (index_k == Nl)
     {
-        c_mat_to_scalar = 0.5 * (xList_k.transpose() - xList_bar_k.transpose()) * Qf * (xList_k - xList_bar_k);
+        c_mat_to_scalar = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Qf * (xList_k - x_track_.col(index_k));
 
     }
     else
     {
-        c_mat_to_scalar = 0.5 * (xList_k.transpose() - xList_bar_k.transpose()) * Q * (xList_k - xList_bar_k);
+        c_mat_to_scalar = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Q * (xList_k - x_track_.col(index_k));
         c_mat_to_scalar += 0.5 * uList_k.transpose() * R * uList_k;
     }
     return c_mat_to_scalar;
 }
 
-stateVec_t CostFunctionKukaArm::finite_diff_cx(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k)
+stateVec_t CostFunctionKukaArm::finite_diff_cx(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k)
 {
     stateVec_t cx_fd_k;
     unsigned int n = stateSize;
@@ -162,14 +163,14 @@ stateVec_t CostFunctionKukaArm::finite_diff_cx(const unsigned int& index_k, cons
 
     for (unsigned int i = 0; i < n; i++)
     {
-        cp1 = cost_func_expre(index_k, xList_k+Dx.col(i), uList_k, xList_bar_k);
-        cm1 = cost_func_expre(index_k, xList_k-Dx.col(i), uList_k, xList_bar_k);
+        cp1 = cost_func_expre(index_k, xList_k+Dx.col(i), uList_k);
+        cm1 = cost_func_expre(index_k, xList_k-Dx.col(i), uList_k);
         cx_fd_k.row(i) = (cp1 - cm1)/(2*delta);
     }
     return cx_fd_k;
 }
 
-commandVec_t CostFunctionKukaArm::finite_diff_cu(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k)
+commandVec_t CostFunctionKukaArm::finite_diff_cu(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k)
 {
     commandVec_t cu_fd_k;
     // unsigned int n = xList_k.size();
@@ -184,14 +185,14 @@ commandVec_t CostFunctionKukaArm::finite_diff_cu(const unsigned int& index_k, co
 
     for (unsigned int i=0; i < m; i++)
     {
-        cp1 = cost_func_expre(index_k, xList_k, uList_k+Du.col(i), xList_bar_k);
-        cm1 = cost_func_expre(index_k, xList_k, uList_k-Du.col(i), xList_bar_k);
+        cp1 = cost_func_expre(index_k, xList_k, uList_k+Du.col(i));
+        cm1 = cost_func_expre(index_k, xList_k, uList_k-Du.col(i));
         cu_fd_k.row(i) = (cp1 - cm1)/(2*delta);
     }
     return cu_fd_k;
 }
 
-void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const commandVecTab_t& uList, const stateVecTab_t& xList_bar)
+void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const commandVecTab_t& uList)
 {
     unsigned int Nl = xList.cols();
 
@@ -221,12 +222,12 @@ void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const c
         scalar_t c_mat_to_scalar;
         if (k == Nl - 1) 
         {
-            c_mat_to_scalar = cost_func_expre(k, xList.col(k), uList.col(k), xList_bar.col(k));
+            c_mat_to_scalar = cost_func_expre(k, xList.col(k), uList.col(k));
             c_new += c_mat_to_scalar(0,0);
         }
         else 
         {
-            c_mat_to_scalar = cost_func_expre(k, xList.col(k), uList.col(k), xList_bar.col(k));
+            c_mat_to_scalar = cost_func_expre(k, xList.col(k), uList.col(k));
             c_new += c_mat_to_scalar(0,0); // TODO: to be checked
         }
 

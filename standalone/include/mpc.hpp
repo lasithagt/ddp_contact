@@ -125,7 +125,7 @@ public:
 	    // Scalar true_cost = cost_function.c(xold, initial_control_trajectory[0]);
 	    stateVec_t x_track;
 	    x_track.setZero();
-	    scalar_t true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory.col(0), x_track_.col(0));
+	    scalar_t true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory.col(0));
 	    
 	    // OptimizerResult<Dynamics> result;
 	    Result result;
@@ -150,7 +150,7 @@ public:
 	        }
 
 	        // Run the optimizer to obtain the next control
-	        opt_.solve(xold, control_trajectory, x_track_);
+	        opt_.solve(xold, control_trajectory);
 	        result = opt_.getLastSolvedTrajectory();
 
 	        u = result.uList.col(0);
@@ -171,7 +171,7 @@ public:
 	        }
 
 	        // Calculate the true cost for this time step
-	        true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory.col(0), x_track_.col(0));
+	        true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory.col(0));
 
 	        if(verbose_) logger_->info("True cost for time step %d: %f\n", i, true_cost(0,0));
 

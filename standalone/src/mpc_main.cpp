@@ -175,7 +175,7 @@ public:
         KukaArm KukaArmModel(dt, N, kukaRobot, contactModel);
 
         // cost function 
-        CostFunctionKukaArm costKukaArm;
+        CostFunctionKukaArm costKukaArm(xgoal, xtrack);
 
         /* -------------------- Optimizer Params ------------------------ */
         optimizer::ILQRSolver::OptSet solverOptions;
@@ -197,15 +197,15 @@ public:
 
         KukaPlant<KukaArm, stateSize, commandSize> KukaModelPlant(KukaArmModel, dt, state_var, control_var);
 
-        stateVec_t s;
-        s.setZero();
+        // stateVec_t s;
+        // s.setZero();
 
-        commandVec_t c;
-        c.setZero();
+        // commandVec_t c;
+        // c.setZero();
 
-        stateVec_t state = KukaModelPlant.f(s, c);
+        // stateVec_t state = KukaModelPlant.f(s, c);
 
-        std::cout << state.transpose() << std::endl;
+        // std::cout << state.transpose() << std::endl;
 
         /* ---------------------------- MPC ----------------------------------- */
 
