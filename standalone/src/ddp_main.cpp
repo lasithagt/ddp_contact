@@ -22,17 +22,14 @@ int main(int argc, char *argv[])
   DDP optimizer;
   stateVec_t xinit, xgoal;
   stateVecTab_t xtrack;
-  xtrack.resize(NumberofKnotPt+1);
+  xtrack.resize(stateSize, NumberofKnotPt + 1);
 
   xinit << 0, 0.5, 0, 1.0, 0, 0.5, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0;
   xgoal << 1.14, 1.93, -1.48, -1.78, 0.31, 0.13, 1.63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
   // The trajectory of contact force to be tracked
-  for (unsigned int i = 0;i < NumberofKnotPt + 1; i++)
-  {
-      xtrack[i].setZero();
-  } 
-
+  xtrack.setZero();
+ 
 
   KUKAModelKDLInternalData robotParams;
   robotParams.numJoints = 7;

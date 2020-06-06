@@ -137,16 +137,14 @@ void DDP::Run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
     Eigen::VectorXd gravityTorque(7);
     kukaRobot->getGravityVector(q_pos_init.data(), gravityTorque);
 
-    // std::cout << gravityTorque.transpose().format(CleanFmt) << std::endl;
-
 
     /*------------------initialize control input----------------------- */
     commandVecTab_t u_0;
-    u_0.resize(N);
+    u_0.resize(commandSize, N);
 
-    for (unsigned i=0; i < N; i++)
+    for (unsigned i = 0; i < N; i++)
     {
-      u_0[i].head(7) = gravityTorque;
+      u_0.col(i).head(7) = gravityTorque;
     }
 
     // robot model
@@ -184,12 +182,14 @@ void DDP::Run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
     /* ------------------------------------------------------------------- */
 
     /* post processing and save data */
-    joint_state_traj.resize(N+1);
-    joint_state_traj_interp.resize(N*InterpolationScale+1);
+    joint_state_traj.resize(stateSize, N + 1);
+    joint_state_traj_interp.resize(stateSize, N*InterpolationScale + 1);
 
-    for(unsigned int i=0;i<=N;i++){
-      joint_state_traj[i] = lastTraj.xList[i];
+    for(unsigned int i=0; i <= N; i++)
+    {
+      joint_state_traj.col(i) = lastTraj.xList.col(i);
     }
+
     torque_traj = lastTraj.uList;
 
     //linear interpolation to 1ms
@@ -197,10 +197,10 @@ void DDP::Run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
     {
       for (unsigned int j = 0;j < N*InterpolationScale; j++)
       {
-        unsigned int index = j/10;
-        joint_state_traj_interp[j](i,0) =  joint_state_traj[index](i,0) + (static_cast<double>(j)-static_cast<double>(index*10.0))*(joint_state_traj[index+1](i,0) - joint_state_traj[index](i,0))/10.0;
+        unsigned int index = j / 10;
+        joint_state_traj_interp.col(j)(i) =  joint_state_traj.col(index)(i) + (static_cast<double>(j) - static_cast<double>(index*10.0))*(joint_state_traj.col(index + 1)(i) - joint_state_traj.col(index)(i))/10.0;
       }
-      joint_state_traj_interp[N*InterpolationScale](i,0) = joint_state_traj[N](i,0);
+      joint_state_traj_interp.col(N * InterpolationScale)(i) = joint_state_traj.col(N)(i);
     }
 
     texec=(static_cast<double>(1000*(tend.tv_sec-tbegin.tv_sec)+((tend.tv_usec-tbegin.tv_usec)/1000)))/1000.;
@@ -218,11 +218,11 @@ void DDP::Run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
 
 
 
-    cout << "lastTraj.xList[" << N << "]:" << lastTraj.xList[N].transpose() << endl;
-    cout << "lastTraj.uList[" << N << "]:" << lastTraj.uList[N].transpose() << endl;
+    cout << "lastTraj.xList[" << N << "]:" << lastTraj.xList.col(N).transpose() << endl;
+    cout << "lastTraj.uList[" << N << "]:" << lastTraj.uList.col(N-1).transpose() << endl;
 
-    cout << "lastTraj.xList[0]:" << lastTraj.xList[0].transpose() << endl;
-    cout << "lastTraj.uList[0]: jjj" << lastTraj.uList[0].transpose() << endl;
+    cout << "lastTraj.xList[0]:" << lastTraj.xList.col(0).transpose() << endl;
+    cout << "lastTraj.uList[0]:" << lastTraj.uList.col(0).transpose() << endl;
 
 
 

@@ -93,7 +93,7 @@ public:
     : dt_(dt), H_(time_steps), verbose_(verbose), dynamics_(dynamics), cost_function_(cost_function), opt_(opt), x_track_(x_track)  
     {
     	logger_ = logger;
-    	control_trajectory.resize(H_);
+    	control_trajectory.resize(commandSize, H_);
     }
 
     /**
@@ -114,7 +114,7 @@ public:
 	         TerminationCondition           &terminate)
 	         // TerminalCostFunction           &terminal_cost_function)
 	{
-	    if(initial_control_trajectory.size() != H_)
+	    if (initial_control_trajectory.cols() != H_)
 	    {
 	        logger_->error("The size of the control trajectory does not match the number of time steps passed to the optimizer!");
 	        std::exit(MPC_BAD_CONTROL_TRAJECTORY);
@@ -125,12 +125,12 @@ public:
 	    // Scalar true_cost = cost_function.c(xold, initial_control_trajectory[0]);
 	    stateVec_t x_track;
 	    x_track.setZero();
-	    scalar_t true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory[0], x_track_[0]);
+	    scalar_t true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory.col(0), x_track_.col(0));
 	    
 	    // OptimizerResult<Dynamics> result;
 	    Result result;
 	    control_trajectory = initial_control_trajectory;
-	    u = initial_control_trajectory[0];
+	    u = initial_control_trajectory.col(0);
 	    std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 	    std::chrono::duration<float, std::milli> elapsed;
 
@@ -153,7 +153,7 @@ public:
 	        opt_.solve(xold, control_trajectory, x_track_);
 	        result = opt_.getLastSolvedTrajectory();
 
-	        u = result.uList[0];
+	        u = result.uList.col(0);
 	        if(verbose_)
 	        {
 	            logger_->info("Obtained control from optimizer: ");
@@ -171,17 +171,17 @@ public:
 	        }
 
 	        // Calculate the true cost for this time step
-	        true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory[0], x_track_[0]);
+	        true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory.col(0), x_track_.col(0));
 
 	        if(verbose_) logger_->info("True cost for time step %d: %f\n", i, true_cost(0,0));
 
 	        // Slide down the control trajectory
-	        for (int i = 0; i < H_; i++)
-	        {
-	        	control_trajectory[i] = result.uList[i + 1];
-	        }
+	        // for (int i = 0; i < H_; i++)
+	        // {
+	        // 	control_trajectory[i] = result.uList[i + 1];
+	        // }
 
-	        // control_trajectory.leftCols(H_ - 1) = result.uList.rightCols(H_ - 1);
+	        control_trajectory.leftCols(H_ - 2) = result.uList.rightCols(H_ - 2);
 	        if(verbose_) logger_->info("Slide down the control trajectory\n");
 
 	        xold = x;

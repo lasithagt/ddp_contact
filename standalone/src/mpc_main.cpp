@@ -164,11 +164,11 @@ public:
 
         /*------------------initialize control input----------------------- */
         commandVecTab_t u_0;
-        u_0.resize(N);
+        u_0.resize(commandSize, N);
 
         for (unsigned i=0; i < N; i++)
         {
-          u_0[i].head(7) = gravityTorque;
+          u_0.col(i).head(7) = gravityTorque;
         }
 
         // robot model
@@ -254,23 +254,25 @@ public:
         /* -------------------------------------------------------------------------- */
 
         /* post processing and save data */
-        joint_state_traj.resize(N+1);
-        joint_state_traj_interp.resize(N*InterpolationScale+1);
+        joint_state_traj.resize(stateSize, N + 1);
+        joint_state_traj_interp.resize(stateSize, N*InterpolationScale + 1);
 
-        for(unsigned int i=0;i<=N;i++){
-          joint_state_traj[i] = lastTraj.xList[i];
+        for (unsigned int i=0; i<=N; i++)
+        {
+          joint_state_traj.col(i) = lastTraj.xList.col(i);
         }
         torque_traj = lastTraj.uList;
 
         //linear interpolation to 1ms
-        for (unsigned int i = 0;i < stateSize; i++)
+        for (unsigned int i = 0; i < stateSize; i++)
         {
-          for (unsigned int j = 0;j < N*InterpolationScale; j++)
+          for (unsigned int j = 0; j < N * InterpolationScale; j++)
           {
-            unsigned int index = j/10;
-            joint_state_traj_interp[j](i,0) =  joint_state_traj[index](i,0) + (static_cast<double>(j)-static_cast<double>(index*10.0))*(joint_state_traj[index+1](i,0) - joint_state_traj[index](i,0))/10.0;
+            unsigned int index = j / 10;
+            joint_state_traj_interp.col(j)(i) =  joint_state_traj.col(index)(i) + (static_cast<double>(j)-static_cast<double>(index*10.0))*(joint_state_traj.col(index + 1)(i) - joint_state_traj.col(index)(i)) / 10.0;
           }
-          joint_state_traj_interp[N*InterpolationScale](i,0) = joint_state_traj[N](i,0);
+
+          joint_state_traj_interp.col(N * InterpolationScale)(i) = joint_state_traj.col(N)(i);
         }
 
         texec=(static_cast<double>(1000*(tend.tv_sec-tbegin.tv_sec)+((tend.tv_usec-tbegin.tv_usec)/1000)))/1000.;
@@ -289,11 +291,11 @@ public:
 
 
 
-        cout << "lastTraj.xList[" << N << "]:" << lastTraj.xList[N].transpose() << endl;
-        cout << "lastTraj.uList[" << N << "]:" << lastTraj.uList[N].transpose() << endl;
+        cout << "lastTraj.xList[" << N << "]:" << lastTraj.xList.col(N).transpose() << endl;
+        cout << "lastTraj.uList[" << N << "]:" << lastTraj.uList.col(N-1).transpose() << endl;
 
-        cout << "lastTraj.xList[0]:" << lastTraj.xList[0].transpose() << endl;
-        cout << "lastTraj.uList[0]:" << lastTraj.uList[0].transpose() << endl;
+        cout << "lastTraj.xList[0]:" << lastTraj.xList.col(0).transpose() << endl;
+        cout << "lastTraj.uList[0]:" << lastTraj.uList.col(0).transpose() << endl;
 
 
 
@@ -321,17 +323,13 @@ int main(int argc, char *argv[])
     MPC optimizer;
     stateVec_t xinit, xgoal;
     stateVecTab_t xtrack;
-    xtrack.resize(NumberofKnotPt+1);
+    xtrack.resize(stateSize, NumberofKnotPt + 1);
 
     xinit << 0, 0.5, 0, 1.0, 0, 0.5, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0;
     xgoal << 1.14, 1.93, -1.48, -1.78, 0.31, 0.13, 1.63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
-    // The trajectory of contact force to be tracked
-    for (unsigned int i = 0;i < NumberofKnotPt + 1; i++)
-    {
-      xtrack[i].setZero();
-    } 
-
+    xtrack.setZero();
+    
 
     optimizer.run(xinit, xgoal, xtrack);
 

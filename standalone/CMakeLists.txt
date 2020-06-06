@@ -56,11 +56,11 @@ set(SOURCES_DDP ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver.cpp ${CMAKE_CURRENT_S
 target_link_libraries(ddp-solver PUBLIC kuka-models)
 target_sources(ddp-solver PUBLIC ${SOURCES_DDP})
 
-add_library(ddp-admm-solver STATIC)
-target_include_directories(ddp-admm-solver PUBLIC include)
-set(SOURCES_DDP_ADMM ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver_track.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/cost_function_kuka_arm_track.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/kuka_arm_track.cc)
-target_link_libraries(ddp-admm-solver PUBLIC kuka-models)
-target_sources(ddp-admm-solver PUBLIC ${SOURCES_DDP_ADMM})
+#add_library(ddp-admm-solver STATIC)
+#target_include_directories(ddp-admm-solver PUBLIC include)
+#set(SOURCES_DDP_ADMM ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver_track.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/cost_function_kuka_arm_track.cc #${CMAKE_CURRENT_SOURCE_DIR}/src/kuka_arm_track.cc)
+#target_link_libraries(ddp-admm-solver PUBLIC kuka-models)
+#target_sources(ddp-admm-solver PUBLIC ${SOURCES_DDP_ADMM})
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -84,6 +84,6 @@ target_include_directories(ddp-optim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ddp-optim orocos-kdl ddp-solver kuka-models)
 
 
-#add_executable(mpc-optim src/mpc_main.cpp)
-#target_include_directories(mpc-optim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-#target_link_libraries(mpc-optim orocos-kdl ddp-solver kuka-models)
+add_executable(mpc-optim src/mpc_main.cpp)
+target_include_directories(mpc-optim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(mpc-optim orocos-kdl ddp-solver kuka-models)

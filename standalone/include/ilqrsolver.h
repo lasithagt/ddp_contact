@@ -33,7 +33,6 @@
 #define TRACE(x) do { if (DEBUG_ILQR) printf(x);} while (0)
 
 using namespace Eigen;
-//USING_NAMESPACE_QPOASES
 
 namespace optimizer {
 

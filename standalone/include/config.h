@@ -35,7 +35,7 @@
 #endif
 
 #define TimeHorizon 1
-#define TimeStep 0.01
+#define TimeStep 0.02
 #define NumberofKnotPt TimeHorizon/TimeStep
 #define InterpolationScale 10 //0.01/1e-3
 const int32_t kNumJoints = 7;
@@ -66,10 +66,10 @@ typedef Eigen::Matrix<double, commandSize, stateSize> commandR_stateC_stateD_t[s
 typedef Eigen::Matrix<double, commandSize, stateSize> commandR_stateC_commandD_t[commandSize];    // commandSize x stateSize x commandSize
 typedef Eigen::Matrix<double, stateSize, stateSize> stateR_stateC_commandD_t[commandSize];        // stateSize x stateSize x commandSize
 typedef Eigen::Matrix<double, commandSize, commandSize> commandR_commandC_stateD_t[stateSize];    // commandSize x commandSize x stateSize
-typedef Eigen::Matrix<double, stateSize+commandSize, 1> stateAug_t;                               // stateSize + commandSize x 1
-// typedef Eigen::Matrix<double, 1,1> scalar_t;                                                     // 1 x 1
-typedef Eigen::Matrix<double, stateSize+commandSize, 1> projStateAndCommand_t;                    // 21 x 1
-typedef double scalar_t
+typedef Eigen::Matrix<double, stateSize + commandSize, 1> stateAug_t;                               // stateSize + commandSize x 1
+typedef Eigen::Matrix<double, 1,1> scalar_t;                                                     // 1 x 1
+typedef Eigen::Matrix<double, stateSize + commandSize, 1> projStateAndCommand_t;                    // 21 x 1
+// typedef double scalar_t
 
 // typedef for half commandSize and stateSize types
 #if SOFT_CONTACT
@@ -106,8 +106,8 @@ typedef Eigen::Matrix<double, stateSize, Eigen::Dynamic> stateVecTab_t;
 typedef std::vector<double> costVecTab_t;
 typedef Eigen::Matrix<double, commandSize, Eigen::Dynamic> commandVecTab_t;
 
-typedef std::vector<Eigen::aligned_allocator<stateMat_t>, Eigen::aligned_allocator<stateMat_t> > stateMatTab_t;
-typedef std::vector<Eigen::aligned_allocator<commandMat_t>, Eigen::aligned_allocator<commandMat_t> > commandMatTab_t;
+typedef std::vector<stateMat_t, Eigen::aligned_allocator<stateMat_t> > stateMatTab_t;
+typedef std::vector<commandMat_t, Eigen::aligned_allocator<commandMat_t> > commandMatTab_t;
 
 typedef std::vector<stateR_commandC_t, Eigen::aligned_allocator<stateR_commandC_t> > stateR_commandC_tab_t;
 typedef std::vector<commandR_stateC_t, Eigen::aligned_allocator<commandR_stateC_t> > commandR_stateC_tab_t;

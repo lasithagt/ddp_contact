@@ -13,12 +13,14 @@ namespace optimizer {
 ILQRSolver::ILQRSolver(KukaArm& iiwaDynamicModel, CostFunctionKukaArm& iiwaCostFunction, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox) : 
         N(time_steps), dt(dt_), Op(solverOptions)
 {
-    //TRACE("initialize dynamic model and cost function\n");
-    dynamicModel = &iiwaDynamicModel;
-    costFunction = &iiwaCostFunction;
-    stateNb = iiwaDynamicModel.getStateNb();
-    commandNb = iiwaDynamicModel.getCommandNb();
-    enableQPBox = QPBox;
+    // TRACE("initialize dynamic model and cost function\n");
+    // TODO : could be optimized here
+
+    dynamicModel  = &iiwaDynamicModel;
+    costFunction  = &iiwaCostFunction;
+    stateNb       = iiwaDynamicModel.getStateNb();
+    commandNb     = iiwaDynamicModel.getCommandNb();
+    enableQPBox   = QPBox;
     enableFullDDP = fullDDP;
 
     if(enableQPBox) TRACE("Box QP is enabled\n");
@@ -35,42 +37,44 @@ ILQRSolver::ILQRSolver(KukaArm& iiwaDynamicModel, CostFunctionKukaArm& iiwaCostF
     Op.time_derivative.resize(Op.max_iter);
     Op.time_derivative.setZero();
 
-    xList.resize(N+1);
-    uList.resize(N);
-    uListFull.resize(N+1);
-    updatedxList.resize(N+1);
-    updateduList.resize(N);
-    costList.resize(N+1);
-    costListNew.resize(N+1);
-    kList.resize(N);
+    xList.resize(stateSize, N + 1);
+    uList.resize(commandSize, N);
+    uListFull.resize(commandSize, N + 1);
+    updatedxList.resize(stateSize, N + 1);
+    updateduList.resize(commandSize, N);
+    costList.resize(N + 1);
+    costListNew.resize(N + 1);
+
+    kList.resize(commandSize, N);
     KList.resize(N);
-    FList.resize(N+1);
-    Vx.resize(N+1);
-    Vxx.resize(N+1);
+    FList.resize(stateSize, N + 1);
+    Vx.resize(stateSize, N + 1);
+    Vxx.resize(N + 1);
     
+    xList.setZero();
+    uList.setZero();
+    uListFull.setZero();
+    updatedxList.setZero();
+    updateduList.setZero();
+    kList.setZero();
+    FList.setZero(); 
+    Vx.setZero();
+
     for (unsigned int i = 0; i < N; i++)
     {
-        xList[i].setZero();
-        uList[i].setZero();
-        uListFull[i].setZero();
-        updatedxList[i].setZero();
-        updateduList[i].setZero();
         costList[i] = 0;
         costListNew[i] = 0;
-        kList[i].setZero();
         KList[i].setZero();
-        FList[i].setZero();    
-        Vx[i].setZero();
         Vxx[i].setZero();
     }
 
-    xList[N].setZero();
-    uListFull[N].setZero();
-    updatedxList[N].setZero();
+    // xList[N].setZero();
+    // uListFull[N].setZero();
+    // updatedxList[N].setZero();
     costList[N] = 0;
     costListNew[N] = 0;
-    FList[N].setZero();
-    Vx[N].setZero();
+    // FList[N].setZero();
+    // Vx[N].setZero();
     Vxx[N].setZero();
     
     k.setZero();
@@ -107,16 +111,16 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const 
         // TRACE("STEP 1: differentiate dynamics and cost along new trajectory\n");
         if (newDeriv)
         {
-            for (unsigned int i = 0; i < u_NAN.size(); i++)
+            for (unsigned int i = 0; i < commandSize; i++)
             {
-                u_NAN(i,0) = sqrt(-1.0); // control vector = Nan for last time step
+                u_NAN(i) = sqrt(-1.0); // control vector = Nan for last time step
             }
             
-            for (unsigned int i = 0; i < uList.size(); i++) 
+            for (unsigned int i = 0; i < uList.cols(); i++) 
             {
-                uListFull[i] = uList[i];
+                uListFull.col(i) = uList.col(i);
             }
-            uListFull[uList.size()] = u_NAN;
+            uListFull.rightCols(1) = u_NAN;
 
             gettimeofday(&tbegin_time_deriv,NULL);
 
@@ -124,10 +128,11 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const 
 
             /* -------------- compute fx, fu ---------------------- */
             dynamicModel->compute_dynamics_jacobian(xList, uListFull);
+            
 
             /* -------------- compute cx, cu, cxx, cuu ------------ */
             costFunction->computeDerivatives(xList, uListFull, x_track);
-            
+
             gettimeofday(&tend_time_deriv,NULL);
             Op.time_derivative(iter) = (static_cast<double>(1000*(tend_time_deriv.tv_sec-tbegin_time_deriv.tv_sec)+((tend_time_deriv.tv_usec-tbegin_time_deriv.tv_usec)/1000)))/1000.0;
 
@@ -163,8 +168,8 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const 
         // TODO: add constraint tolerance check
         if (Op.g_norm < Op.tolGrad && Op.lambda < 1e-5)
         {
-            Op.dlambda= min(Op.dlambda / Op.lambdaFactor, 1.0/Op.lambdaFactor);
-            Op.lambda= Op.lambda * Op.dlambda * (Op.lambda > Op.lambdaMin);
+            Op.dlambda = min(Op.dlambda / Op.lambdaFactor, 1.0/Op.lambdaFactor);
+            Op.lambda = Op.lambda * Op.dlambda * (Op.lambda > Op.lambdaMin);
             if (Op.debug_level >= 1)
             {
                 TRACE(("\nSUCCESS: gradient norm < tolGrad\n"));
@@ -189,7 +194,7 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const 
                 double z;
                 if (Op.expected > 0) 
                 {
-                    z = Op.dcost/Op.expected;
+                    z = Op.dcost / Op.expected;
                 }
                 else 
                 {
@@ -220,11 +225,11 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const 
             if (Op.debug_level > 1)
             {
                 if(!debugging_print) printf("%-14d%-12.6g%-15.3g%-15.3g%-19.3g%-17.1f\n", iter+1, accumulate(costList.begin(), costList.end(), 0.0), Op.dcost, Op.expected, Op.g_norm, log10(Op.lambda));
-                Op.last_head = Op.last_head+1;
+                Op.last_head = Op.last_head + 1;
             }
 
             Op.dlambda = min(Op.dlambda / Op.lambdaFactor, 1.0/Op.lambdaFactor);
-            Op.lambda = Op.lambda * Op.dlambda * (Op.lambda > Op.lambdaMin);
+            Op.lambda  = Op.lambda * Op.dlambda * (Op.lambda > Op.lambdaMin);
 
             // accept changes
             xList = updatedxList;
@@ -234,9 +239,12 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const 
 
             // terminate ?
             // TODO: add constraint tolerance check
-            if(Op.dcost < Op.tolFun) {
-                if(Op.debug_level >= 1)
+            if(Op.dcost < Op.tolFun) 
+            {
+                if(Op.debug_level >= 1) 
+                {
                     TRACE(("\nSUCCESS: cost change < tolFun\n"));
+                }
             
                 break;
             }
@@ -279,47 +287,47 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const 
 
 void ILQRSolver::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0, const stateVecTab_t& x_track)
 {
-    xList[0] = x_0;
+    xList.col(0) = x_0;
     commandVec_t zeroCommand;
     zeroCommand.setZero();
+
     // (low priority) TODO: implement control limit selection
     // (low priority) TODO: initialize trace data structure
 
     initFwdPassDone = 0;
     diverge = 1;
     
-    for (int i=0; i < N; i++)
+    for (int i = 0; i < N; i++)
     {
-        uList[i] = u_0[i];
+        uList.col(i) = u_0.col(i);
     }
 
-    updatedxList[0] = x_0;
+    updatedxList.col(0) = x_0;
 
     commandVec_t u_NAN_loc;
     u_NAN_loc(0) = sqrt(-1.0);
     isUNan = 0;
-    // double cost = 0;
+
     scalar_t c_mat_to_scalar;
 
     for (unsigned int i = 0; i < N; i++) 
     {
-        updateduList[i] = uList[i];
+        updateduList.col(i)     = uList.col(i);
 
-        c_mat_to_scalar = costFunction->cost_func_expre(i, updatedxList[i], updateduList[i], x_track[i]);
-        updatedxList[i+1] = forward_integration(updatedxList[i], updateduList[i]);
-        costList[i] = c_mat_to_scalar(0,0);
+        c_mat_to_scalar         = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i), x_track.col(i));
+        updatedxList.col(i + 1) = forward_integration(updatedxList.col(i), updateduList.col(i));
+        costList[i]             = c_mat_to_scalar(0,0);
     }
     // getting final cost, state, input=NaN
-    c_mat_to_scalar = costFunction->cost_func_expre(N, updatedxList[N], u_NAN_loc, x_track[N]);
+    c_mat_to_scalar = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc, x_track.col(N));
     costList[N] = c_mat_to_scalar(0,0);
 
 
     // simplistic divergence test, check for the last time step if it has diverged.
     int diverge_element_flag = 0;
-
-    for (unsigned int j = 0; j < xList[xList.size()-1].size(); j++)
+    for (unsigned int j = 0; j < stateSize; j++)
     {
-        if (fabs(xList[xList.size()-1](j,0)) > 1e8)
+        if (fabs(xList(j, N - 1)) > 1e8)
         { 
             diverge_element_flag = 1; // checking the absolute value
         }
@@ -342,13 +350,13 @@ void ILQRSolver::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_
     //   cout << "init traj xList[" << i << "]:" << updatedxList[i].transpose() << endl;
     // }
 
-    if(Op.debug_level > 0) TRACE("\n =========== begin iLQR =========== \n");
+    if(Op.debug_level > 0) {TRACE("\n =========== begin iLQR =========== \n");}
 }
 
 void ILQRSolver::doForwardPass(const stateVec_t& x_0, const stateVecTab_t& x_track)
 {
 
-    updatedxList[0] = x_0;
+    updatedxList.col(0) = x_0;
 
     commandVec_t u_NAN_loc;
     u_NAN_loc(0) = sqrt(-1.0);
@@ -358,35 +366,32 @@ void ILQRSolver::doForwardPass(const stateVec_t& x_0, const stateVecTab_t& x_tra
 
     for (unsigned int i = 0; i < N; i++) 
     {
-        updateduList.col(i)   = uList.col(i) + alpha*kList[i] + KList[i]*(updatedxList.col(i)-xList.col(i));
-
-        c_mat_to_scalar       = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i), x_track.col(i));
-        costListNew.col(i)    = c_mat_to_scalar;
-
-        updatedxList.col(i+1) = forward_integration(updatedxList.col(i), updateduList.col(i));
-
+        updateduList.col(i)     = uList.col(i) + alpha * kList.col(i) + KList[i] * (updatedxList.col(i) - xList.col(i));
+        c_mat_to_scalar         = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i), x_track.col(i));
+        costListNew[i]          = c_mat_to_scalar(0,0);
+        updatedxList.col(i + 1) = forward_integration(updatedxList.col(i), updateduList.col(i));
     }
+
     c_mat_to_scalar = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc, x_track.col(N));
     costListNew[N]  = c_mat_to_scalar(0,0);
 }
 
 /* 4th-order Runge-Kutta step */
-inline stateVec_t ILQRSolver::forward_integration(const stateVec_t& X, const commandVec_t& U)
+inline stateVec_t ILQRSolver::forward_integration(const stateVec_t& x, const commandVec_t& u)
 {
     // if(debugging_print) TRACE_KUKA_ARM("update: 4th-order Runge-Kutta step\n");
 
     // gettimeofday(&tbegin_period4, NULL);
 
-    // output of kuka arm dynamics is xdot = f(x,u)
-    stateVec_t x_dot1 = dynamicModel->kuka_arm_dynamics(X, U);
-    stateVec_t x_dot2 = dynamicModel->kuka_arm_dynamics(X + 0.5 * dt * x_dot1, U);
-    stateVec_t x_dot3 = dynamicModel->kuka_arm_dynamics(X + 0.5 * dt * x_dot2, U);
-    stateVec_t x_dot4 = dynamicModel->kuka_arm_dynamics(X + dt * x_dot3, U);
+    stateVec_t x_dot1 = dynamicModel->kuka_arm_dynamics(x, u);
+    stateVec_t x_dot2 = dynamicModel->kuka_arm_dynamics(x + 0.5 * dt * x_dot1, u);
+    stateVec_t x_dot3 = dynamicModel->kuka_arm_dynamics(x + 0.5 * dt * x_dot2, u);
+    stateVec_t x_dot4 = dynamicModel->kuka_arm_dynamics(x + dt * x_dot3, u);
 
-    stateVec_t X_new;
-    X_new = X + (dt/6) * (x_dot1 + 2 * x_dot2 + 2 * x_dot3 + x_dot4);
+    stateVec_t x_new;
+    x_new = x + (dt/6) * (x_dot1 + 2 * x_dot2 + 2 * x_dot3 + x_dot4);
 
-    return X_new;
+    return x_new;
 }
 
 void ILQRSolver::doBackwardPass()
@@ -403,18 +408,18 @@ void ILQRSolver::doBackwardPass()
     diverge = 0;
     
     g_norm_sum = 0.0;
-    Vx[N]      = costFunction->getcx()[N];
+    Vx.col(N)  = costFunction->getcx().col(N);
     Vxx[N]     = costFunction->getcxx()[N];
     dV.setZero();
 
     for (int i = static_cast<int>(N-1); i >= 0; i--)
     {
-        Qx = costFunction->getcx()[i]   + dynamicModel->getfxList()[i].transpose() * Vx[i+1];
-        Qu = costFunction->getcu()[i]   + dynamicModel->getfuList()[i].transpose() * Vx[i+1];
-        Qxx = costFunction->getcxx()[i] + dynamicModel->getfxList()[i].transpose() * Vxx[i+1]  * dynamicModel->getfxList()[i];
-        Quu = costFunction->getcuu()[i] + dynamicModel->getfuList()[i].transpose() * Vxx[i+1]  * dynamicModel->getfuList()[i];
-        Qux = costFunction->getcux()[i] + dynamicModel->getfuList()[i].transpose() * Vxx[i+1]  * dynamicModel->getfxList()[i];
-
+        Qx  = costFunction->getcx().col(i)  + dynamicModel->getfxList()[i].transpose() *  Vx.col(i + 1);
+        Qu  = costFunction->getcu().col(i)  + dynamicModel->getfuList()[i].transpose() *  Vx.col(i + 1);
+        Qxx = costFunction->getcxx()[i] + dynamicModel->getfxList()[i].transpose() * Vxx[i + 1]  * dynamicModel->getfxList()[i];
+        Quu = costFunction->getcuu()[i] + dynamicModel->getfuList()[i].transpose() * Vxx[i + 1]  * dynamicModel->getfuList()[i];
+        Qux = costFunction->getcux()[i] + dynamicModel->getfuList()[i].transpose() * Vxx[i + 1]  * dynamicModel->getfxList()[i];
+ 
 
         if (Op.regType == 1)
         {
@@ -431,8 +436,14 @@ void ILQRSolver::doBackwardPass()
         {
             //To be Implemented : Regularization (is Quu definite positive ?)
             TRACE("Quu is not positive definite ");
-            if(Op.lambda==0.0) Op.lambda += 1e-4;
-            else Op.lambda *= 10;
+            if (Op.lambda==0.0) 
+            {
+                Op.lambda += 1e-4;
+            }
+            else 
+            {   
+                Op.lambda *= 10;
+            }
             backPassDone = 0;
             break;
         }
@@ -479,23 +490,25 @@ void ILQRSolver::doBackwardPass()
             K = - L_inverse * L.transpose().inverse() * Qux;
         }
 
-        //update cost-to-go approximation
-        dV(0) += k.transpose()*Qu;
+        // update cost-to-go approximation
+        dV(0) += k.transpose() * Qu;
+
         scalar_t c_mat_to_scalar;
         c_mat_to_scalar = 0.5 * k.transpose() * Quu * k;
         dV(1) += c_mat_to_scalar(0,0);
 
-        Vx[i]  = Qx  + K.transpose() * Quu * k + K.transpose() * Qu  + Qux.transpose() * k;
+        Vx.col(i)  = Qx  + K.transpose() * Quu * k + K.transpose() * Qu  + Qux.transpose() * k;
         Vxx[i] = Qxx + K.transpose() * Quu * K + K.transpose() * Qux + Qux.transpose() * K;
         Vxx[i] = 0.5 * (Vxx[i] + Vxx[i].transpose());
 
-        kList[i] = k;
+        kList.col(i) = k;
         KList[i] = K;
 
         g_norm_max= 0.0;
-        for (unsigned int j = 0; j<commandSize; j++) 
+
+        for (unsigned int j = 0; j < commandSize; j++) 
         {
-            g_norm_i = fabs(kList[i](j,0)) / (fabs(uList[i](j,0))+1.0);
+            g_norm_i = fabs(kList.col(i)(j)) / (fabs(uList.col(i)(j)) + 1.0);
             if(g_norm_i > g_norm_max) g_norm_max = g_norm_i;
         }
         g_norm_sum += g_norm_max;

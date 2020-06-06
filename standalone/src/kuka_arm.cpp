@@ -73,34 +73,31 @@ stateVec_t KukaArm::kuka_arm_dynamics(const stateVec_t& X, const commandVec_t& t
     {
         if (SOFT_CONTACT)
         {
-            q = X.head((stateSize-3)/2);
+            q  = X.head((stateSize-3)/2);
             qd = X.segment((stateSize-3)/2, (stateSize-3)/2);
             force_current = X.tail(3);
 
             //LW-Test
-            Eigen::Matrix<double,(stateSize-3)/2+2,1> q_full;
-            Eigen::Matrix<double,(stateSize-3)/2+2,1> qd_full;
-            Eigen::Matrix<double,(stateSize-3)/2+2,1> vd_full;
+            Eigen::Matrix<double, (stateSize-3)/2+2,1> q_full;
+            Eigen::Matrix<double, (stateSize-3)/2+2,1> qd_full;
+            Eigen::Matrix<double, (stateSize-3)/2+2,1> vd_full;
             q_full.setZero();
             qd_full.setZero();
             vd_full.setZero();
-            q_full.topRows((stateSize-3)/2)=q;
-            qd_full.topRows((stateSize-3)/2)=qd;
+            q_full.topRows((stateSize-3)/2) = q;
+            qd_full.topRows((stateSize-3)/2) = qd;
 
-          
             Eigen::Vector3d force_dot;
 
             // dynamics vector
             vd.setZero();
             force_dot.setZero();
 
-            // Xdot_new << qd, vd, force_dot;
             //LW---------------
 
             force_current.setZero();
 
             kukaRobot_->getForwardDynamics(q.data(), qd.data(), tau, qdd);
-            // std::cout << qdd << std::endl;
 
             Xdot_new << qd, qdd, force_dot;
             // std::cout << Xdot_new << std::endl;
@@ -135,17 +132,17 @@ void KukaArm::compute_dynamics_jacobian(const stateVecTab_t& xList, const comman
 
     // // for a positive-definite quadratic, no control cost (indicated by the iLQG function using nans), is equivalent to u=0
     if(debugging_print) TRACE_KUKA_ARM("initialize dimensions\n");
-    unsigned int Nl = xList.size();
+    unsigned int Nl = xList.cols();
 
     if(debugging_print) TRACE_KUKA_ARM("compute cost function\n");
 
     for (unsigned int k=0; k < Nl-1; k++) 
     {
         /* Numdiff Eigen */
-        num_diff_.df((typename Differentiable<double, stateSize, commandSize>::InputType() << xList.at(k), uList.at(k)).finished(), j_);
+        num_diff_.df((typename Differentiable<double, stateSize, commandSize>::InputType() << xList.col(k), uList.col(k)).finished(), j_);
 
-        fxList[k] = j_.leftCols(stateSize)*dt + Eigen::Matrix<double, stateSize, stateSize>::Identity();
-        fuList[k] = j_.rightCols(commandSize)*dt;
+        fxList[k] = j_.leftCols(stateSize) * dt + Eigen::Matrix<double, stateSize, stateSize>::Identity();
+        fuList[k] = j_.rightCols(commandSize) * dt;
     }
 
     

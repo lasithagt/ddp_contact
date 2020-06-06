@@ -1,7 +1,7 @@
 #include "cost_function_kuka_arm.h"
 
 
-	
+// TODO : incoperate x_track into 
 CostFunctionKukaArm::CostFunctionKukaArm()
 {    
     if (SOFT_CONTACT)
@@ -50,6 +50,7 @@ CostFunctionKukaArm::CostFunctionKukaArm()
         // initial, final costs (pos ,vel)
         // torque cost
         // l = sigma(xQx+uRu) + xfQfxf
+
         QDiagElementVec << pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100,  
                             vel_scale*10, vel_scale*10, vel_scale*10, vel_scale*10, vel_scale*10, vel_scale*10, vel_scale*10;
         QfDiagElementVec << pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0,
@@ -66,9 +67,9 @@ CostFunctionKukaArm::CostFunctionKukaArm()
     // TimeHorizon = total time 
     // TimeStep = time between two timesteps
     // N = number of knot
-    N = TimeHorizon/TimeStep;
-    cx_new.resize(N+1);
-    cu_new.resize(N+1);
+    N = TimeHorizon / TimeStep;
+    cx_new.resize(stateSize, N+1);
+    cu_new.resize(commandSize, N+1);
     cxx_new.resize(N+1);
     cux_new.resize(N+1);
     cuu_new.resize(N+1);
@@ -149,7 +150,7 @@ scalar_t CostFunctionKukaArm::cost_func_expre(const unsigned int& index_k, const
 stateVec_t CostFunctionKukaArm::finite_diff_cx(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& xList_bar_k)
 {
     stateVec_t cx_fd_k;
-    unsigned int n = xList_k.size();
+    unsigned int n = stateSize;
     // unsigned int m = uList_k.size();
     scalar_t cp1;
     scalar_t cm1;
@@ -172,13 +173,13 @@ commandVec_t CostFunctionKukaArm::finite_diff_cu(const unsigned int& index_k, co
 {
     commandVec_t cu_fd_k;
     // unsigned int n = xList_k.size();
-    unsigned int m = uList_k.size();
+    unsigned int m = commandSize;
     scalar_t cp1;
     scalar_t cm1;
     double delta = 1e-5;
     commandMat_t Du;
     Du.setIdentity();
-    Du = delta*Du;
+    Du = delta * Du;
     // State perturbation for cost
 
     for (unsigned int i=0; i < m; i++)
@@ -192,7 +193,7 @@ commandVec_t CostFunctionKukaArm::finite_diff_cu(const unsigned int& index_k, co
 
 void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const commandVecTab_t& uList, const stateVecTab_t& xList_bar)
 {
-    unsigned int Nl = xList.size();
+    unsigned int Nl = xList.cols();
 
     stateVec_t cx1;
     stateVec_t cxm1;
@@ -208,8 +209,8 @@ void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const c
     Dx.setIdentity();
     Dx = delta * Dx;
 
-    unsigned int n = xList[0].size();
-    unsigned int m = uList[0].size();
+    unsigned int n = stateSize;
+    unsigned int m = commandSize;
 
     for (unsigned int k = 0; k < Nl; k++)
     {
@@ -218,14 +219,14 @@ void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const c
         // cx_temp << xList[k] - xgoal;
 
         scalar_t c_mat_to_scalar;
-        if (k == Nl-1) 
+        if (k == Nl - 1) 
         {
-            c_mat_to_scalar = cost_func_expre(k, xList[k], uList[k], xList_bar[k]);
+            c_mat_to_scalar = cost_func_expre(k, xList.col(k), uList.col(k), xList_bar.col(k));
             c_new += c_mat_to_scalar(0,0);
         }
         else 
         {
-            c_mat_to_scalar = cost_func_expre(k, xList[k], uList[k], xList_bar[k]);
+            c_mat_to_scalar = cost_func_expre(k, xList.col(k), uList.col(k), xList_bar.col(k));
             c_new += c_mat_to_scalar(0,0); // TODO: to be checked
         }
 
@@ -249,8 +250,8 @@ void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const c
         // }
 
         // Analytical derivatives given quadratic cost
-        cx_new[k] = Q * (xList[k]);
-        cu_new[k] = R * uList[k];
+        cx_new.col(k) = Q * xList.col(k);
+        cu_new.col(k) = R * uList.col(k);
         cxx_new[k] = Q;
 
         // costFunction->getcux()[k].setZero();
