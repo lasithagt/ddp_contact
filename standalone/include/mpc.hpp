@@ -173,7 +173,7 @@ public:
 	        // Calculate the true cost for this time step
 	        true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory.col(0));
 
-	        if(verbose_) logger_->info("True cost for time step %d: %f\n", i, true_cost(0,0));
+	        if(verbose_) logger_->info("True cost for time step %d: %f\n", i, true_cost);
 
 	        // Slide down the control trajectory
 	        // for (int i = 0; i < H_; i++)

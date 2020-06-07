@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
   std::unique_ptr<KUKAModelKDL> kukaRobot = std::unique_ptr<KUKAModelKDL>(new KUKAModelKDL(robot, robotParams));
 
   /* initialize xinit, xgoal, xtrack - for the hozizon*/
-	optimizer.Run(xinit, xgoal, xtrack);
+	optimizer.run(xinit, xgoal, xtrack);
 
 
 

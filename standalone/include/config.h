@@ -37,10 +37,11 @@
 #define TimeHorizon 1
 #define TimeStep 0.02
 #define NumberofKnotPt TimeHorizon/TimeStep
-#define InterpolationScale 10 //0.01/1e-3
+#define InterpolationScale 10 
 const int32_t kNumJoints = 7;
-#define UDP_TRAJ_DIR "/home/zzhou387/drake/DDP_traj_gen/trajectory/"
-const char* const kLcmQueryResultsChannel = "TREE_SEARCH_QUERY_RESULTS";
+
+// #define UDP_TRAJ_DIR "/home/zzhou387/drake/DDP_traj_gen/trajectory/"
+// const char* const kLcmQueryResultsChannel = "TREE_SEARCH_QUERY_RESULTS";
 
 #define BOXWEIGHT 0.122
 
@@ -67,9 +68,8 @@ typedef Eigen::Matrix<double, commandSize, stateSize> commandR_stateC_commandD_t
 typedef Eigen::Matrix<double, stateSize, stateSize> stateR_stateC_commandD_t[commandSize];        // stateSize x stateSize x commandSize
 typedef Eigen::Matrix<double, commandSize, commandSize> commandR_commandC_stateD_t[stateSize];    // commandSize x commandSize x stateSize
 typedef Eigen::Matrix<double, stateSize + commandSize, 1> stateAug_t;                               // stateSize + commandSize x 1
-typedef Eigen::Matrix<double, 1,1> scalar_t;                                                     // 1 x 1
 typedef Eigen::Matrix<double, stateSize + commandSize, 1> projStateAndCommand_t;                    // 21 x 1
-// typedef double scalar_t
+typedef double scalar_t;
 
 // typedef for half commandSize and stateSize types
 #if SOFT_CONTACT
@@ -81,24 +81,6 @@ typedef Eigen::Matrix<double, stateSize + commandSize, 1> projStateAndCommand_t;
     typedef Eigen::Matrix<double, stateSize/2, stateSize/2> stateMat_half_t;                          // stateSize/2 x stateSize/2
     typedef Eigen::Matrix<double, stateSize/2, commandSize> stateR_half_commandC_t;                   // stateSize/2 x commandSize
 #endif
-
-// typedef for vectorized state and command matrix (over the horizon)
-// typedef std::vector<stateVec_t, Eigen::aligned_allocator<stateVec_t> > stateVecTab_t;
-// typedef std::vector<double> costVecTab_t;
-// typedef std::vector<commandVec_t, Eigen::aligned_allocator<commandVec_t> > commandVecTab_t;
-
-// typedef std::vector<stateMat_t, Eigen::aligned_allocator<stateMat_t> > stateMatTab_t;
-// typedef std::vector<commandMat_t, Eigen::aligned_allocator<commandMat_t> > commandMatTab_t;
-
-// typedef std::vector<stateR_commandC_t, Eigen::aligned_allocator<stateR_commandC_t> > stateR_commandC_tab_t;
-// typedef std::vector<commandR_stateC_t, Eigen::aligned_allocator<commandR_stateC_t> > commandR_stateC_tab_t;
-
-// typedef std::vector<stateVec_half_t, Eigen::aligned_allocator<stateVec_half_t> > stateVecTab_half_t;
-// typedef std::vector<projStateAndCommand_t, Eigen::aligned_allocator<projStateAndCommand_t> > projStateAndCommandTab_t;
-
-// //typedef std::vector<stateTens_t> stateTensTab_t;
-// typedef std::vector<std::vector<stateMat_t, Eigen::aligned_allocator<stateMat_t> > > stateTensTab_t;
-// typedef std::vector<std::vector<stateR_commandC_t, Eigen::aligned_allocator<stateR_commandC_t> > > stateR_commandC_Tens_t;
 
 
 /* --------------------------------------------------------------------------------------------------------------------------- */

@@ -22,7 +22,6 @@ CostFunctionKukaArm::CostFunctionKukaArm(const stateVec_t &x_goal, const stateVe
         fk_pos_scale = 0;
         fk_orien_scale = 0;
 
-        // initial, final costs (pos ,vel)
         // torque cost
         // l = sigma(xQx+uRu) + xfQfxf
         QDiagElementVec << pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100,  
@@ -123,7 +122,7 @@ scalar_t CostFunctionKukaArm::forwardkin_cost(stateVec_t x, commandVec_t u, Eige
         // std::cout << "in this function" << std::endl;
 
         scalar_t c_mat_to_scalar;
-        c_mat_to_scalar.setZero();
+        // c_mat_to_scalar.setZero();
 
         return c_mat_to_scalar;
     }
@@ -165,7 +164,7 @@ stateVec_t CostFunctionKukaArm::finite_diff_cx(const unsigned int& index_k, cons
     {
         cp1 = cost_func_expre(index_k, xList_k+Dx.col(i), uList_k);
         cm1 = cost_func_expre(index_k, xList_k-Dx.col(i), uList_k);
-        cx_fd_k.row(i) = (cp1 - cm1)/(2*delta);
+        cx_fd_k(i) = (cp1 - cm1) / (2 * delta);
     }
     return cx_fd_k;
 }
@@ -187,7 +186,7 @@ commandVec_t CostFunctionKukaArm::finite_diff_cu(const unsigned int& index_k, co
     {
         cp1 = cost_func_expre(index_k, xList_k, uList_k+Du.col(i));
         cm1 = cost_func_expre(index_k, xList_k, uList_k-Du.col(i));
-        cu_fd_k.row(i) = (cp1 - cm1)/(2*delta);
+        cu_fd_k(i) = (cp1 - cm1) / (2 * delta);
     }
     return cu_fd_k;
 }
@@ -217,19 +216,18 @@ void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const c
     {
         // if (k < Nl-1)
 
-        // cx_temp << xList[k] - xgoal;
 
-        scalar_t c_mat_to_scalar;
-        if (k == Nl - 1) 
-        {
-            c_mat_to_scalar = cost_func_expre(k, xList.col(k), uList.col(k));
-            c_new += c_mat_to_scalar(0,0);
-        }
-        else 
-        {
-            c_mat_to_scalar = cost_func_expre(k, xList.col(k), uList.col(k));
-            c_new += c_mat_to_scalar(0,0); // TODO: to be checked
-        }
+        // scalar_t c_mat_to_scalar;
+        // if (k == Nl - 1) 
+        // {
+        //     c_mat_to_scalar = cost_func_expre(k, xList.col(k), uList.col(k));
+        //     c_new += c_mat_to_scalar(0,0);
+        // }
+        // else 
+        // {
+        //     c_mat_to_scalar = cost_func_expre(k, xList.col(k), uList.col(k));
+        //     c_new += c_mat_to_scalar(0,0); // TODO: to be checked
+        // }
 
         // cx_new[k] = finite_diff_cx(k, xList[k], uList[k], xList_bar[k]);
         // cu_new[k] = finite_diff_cu(k, xList[k], uList[k], xList_bar[k]);
@@ -261,13 +259,6 @@ void CostFunctionKukaArm::computeDerivatives(const stateVecTab_t& xList, const c
         //Note that cu , cux and cuu at the final time step will never be used (see ilqrsolver::doBackwardPass)
         cux_new[k].setZero();
     } 
-
-    // cout << "debug for derivatives cx" << costFunction->getcx()[k] << endl;
-    // cout << "debug for derivatives cu" << costFunction->getcu()[k] << endl;
-    // cout << "debug for derivatives cxx" << costFunction->getcxx()[k] << endl;
-    // cout << "debug for derivatives cuu" << costFunction->getcuu()[k] << endl;
-    // cout << "debug for derivatives cxx" << costFunction->getcxx()[k] << endl;  
-    // cout << "Q = " << costFunction->getQ() << endl;     
 
     c_new = 0;
     

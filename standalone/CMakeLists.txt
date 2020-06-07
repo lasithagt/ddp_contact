@@ -37,6 +37,7 @@ endif()
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+set(CMAKE_CXX_FLAGS "-march=native -mtune=native -mavx2 -mfma")
 set(CMAKE_CXX_FLAGS "-std=c++11")
 
 

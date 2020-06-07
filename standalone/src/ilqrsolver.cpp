@@ -303,19 +303,15 @@ void ILQRSolver::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_
     u_NAN_loc(0) = sqrt(-1.0);
     isUNan = 0;
 
-    scalar_t c_mat_to_scalar;
-
     for (unsigned int i = 0; i < N; i++) 
     {
         updateduList.col(i)     = uList.col(i);
 
-        c_mat_to_scalar         = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i));
+        costList[i]             = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i));
         updatedxList.col(i + 1) = forward_integration(updatedxList.col(i), updateduList.col(i));
-        costList[i]             = c_mat_to_scalar(0,0);
     }
     // getting final cost, state, input=NaN
-    c_mat_to_scalar = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc);
-    costList[N] = c_mat_to_scalar(0,0);
+    costList[N] = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc);
 
 
     // simplistic divergence test, check for the last time step if it has diverged.
@@ -357,18 +353,15 @@ void ILQRSolver::doForwardPass(const stateVec_t& x_0)
     u_NAN_loc(0) = sqrt(-1.0);
 
     isUNan = 0;
-    scalar_t c_mat_to_scalar;
 
     for (unsigned int i = 0; i < N; i++) 
     {
         updateduList.col(i)     = uList.col(i) + alpha * kList.col(i) + KList[i] * (updatedxList.col(i) - xList.col(i));
-        c_mat_to_scalar         = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i));
-        costListNew[i]          = c_mat_to_scalar(0,0);
+        costListNew[i]          = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i));
         updatedxList.col(i + 1) = forward_integration(updatedxList.col(i), updateduList.col(i));
     }
 
-    c_mat_to_scalar = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc);
-    costListNew[N]  = c_mat_to_scalar(0,0);
+    costListNew[N] = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc);
 }
 
 /* 4th-order Runge-Kutta step */
@@ -488,9 +481,7 @@ void ILQRSolver::doBackwardPass()
         // update cost-to-go approximation
         dV(0) += k.transpose() * Qu;
 
-        scalar_t c_mat_to_scalar;
-        c_mat_to_scalar = 0.5 * k.transpose() * Quu * k;
-        dV(1) += c_mat_to_scalar(0,0);
+        dV(1) += 0.5 * k.transpose() * Quu * k;
 
         Vx.col(i)  = Qx  + K.transpose() * Quu * k + K.transpose() * Qu  + Qux.transpose() * k;
         Vxx[i] = Qxx + K.transpose() * Quu * K + K.transpose() * Qux + Qux.transpose() * K;

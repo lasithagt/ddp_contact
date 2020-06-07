@@ -10,7 +10,7 @@
 
 using namespace Eigen;
 
-
+// template <class DynamicsT, class PlantT, class costFunctionT, class OptimizerT, class OptimizerResultT>
 class CostFunctionKukaArm
 {
 	using Jacobian = Eigen::Matrix<double, 1, stateSize + commandSize>;

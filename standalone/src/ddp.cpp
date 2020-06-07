@@ -27,7 +27,7 @@ DDP::DDP()
 }
 
 /* -------------------- Soft_contact_state = 17(14+3) ------------------------*/
-void DDP::Run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack) 
+void DDP::run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack) 
 {
     struct timeval tbegin,tend;
     double texec = 0.0;
