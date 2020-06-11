@@ -1,4 +1,4 @@
-function [x,u] = demo_vector_mass_dynamics_ADMM_CEN
+function [x,u] = demo_dynamics_ADMM_3BLKS
 % A demo for Alternating Direction Method of Multiplier implemented on a
 % car-parking problem
 clc
@@ -20,16 +20,16 @@ T       = 1000;              % horizon
 
 Op.lims  = [-pi pi;             % wheel angle limits (radians)
              -3  3];            % acceleration limits (m/s^2)
-Op.plot = 1;                    % plot the derivatives as well
+Op.plot  = 1;                    % plot the derivatives as well
 Op.maxIter = 10;
 
 
-% prepare the visualization window and graphics callback
-t = linspace(0,2*pi,T+1);
-r = 0.04;
-xd_x = r*cos(t);
-xd_y = r*sin(2*t);%linspace(-0.05,0.05,numel(t)); %
-xd_z = (1.1608+0.136)*ones(1,numel(t));
+% desired path to track
+t    = linspace(0,2*pi,T+1);
+r    = 0.04;
+xd_x = r * cos(t);
+xd_y = r * sin(2*t); % linspace(-0.05,0.05,numel(t)); %\
+xd_z = (1.1608+0.136) * ones(1,numel(t));
 xd_f = -0.5 * sin(1*t) - 1.5;
 % [xd_x, xd_y, xd_z] = lissajous_curve(t, 1.1608);
 
@@ -37,8 +37,10 @@ xd_f = -0.5 * sin(1*t) - 1.5;
 % calculate the center of curvature.
 global RC K
 [~,RC,K] = curvature([xd_x', xd_y', xd_z']);
-RC(1) = RC(2); RC(end) = RC(end);
-K(1,:) = K(2,:); K(end,:) = K(end-1,:);
+RC(1) = RC(2);
+RC(end) = RC(end);
+K(1,:) = K(2,:);
+K(end,:) = K(end-1,:);
 K = K';
 
 RC(isnan(RC)) = 1e10;
@@ -58,29 +60,31 @@ theta0      = 0 + rand(7,1)*0.1;
 theta0(2)   = 0.2;
 theta0(4)   = 0.2;
 [Slist, M_] = manipulator_POE();
-[q0,s]      = IKinSpace_modified(Slist, M_, T0, theta0, 0.001, 0.001);
+[q0,s]      = IKinSpace_modified_initial(Slist, M_, T0, theta0, 0.001, 0.001);
 
-if any(q0>pi)
-    for i=1:7
-        if (q0(i)>pi)
+if any(q0 > pi)
+    for i = 1:7
+        if (q0(i) > pi)
             q0(i) = -2*pi + q0(i);
         end
     end
 end
 
-if (s==1)
+if (s == 1)
     fprintf("Inverse Solution Found...")
 else
     error("Inverse Solution Not Found...")
 end
 
-x0      = [q0' xd_x(1) xd_y(1) xd_z(1) 0 0 0 zeros(1,7) 0 0.0 0 0 0 0 0 0 0]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
-u0      = -0. + zeros(13,T);                                                     % initial controls
+
+
+x0       = [q0' zeros(1,7) 0 0 0]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
+u0       = -0. + zeros(7, T);                                                     % initial controls
 
 u0 (3,1) = 0;
-q_d     = repmat(q0, 1, numel(t));
-xd      = [q_d;xd_x;xd_y;xd_z;zeros(3,numel(t));zeros(7,numel(t));zeros(6,numel(t));zeros(2,numel(t));xd_f];
-% xd   = [xd_x;xd_y;xd_z;zeros(11,numel(t));xd_f];
+q_des    = repmat(q0, 1, numel(t));
+xd       = [q_des; zeros(7,numel(t)); xd_f];
+
 
 % === run the optimization! ===
 [x,u]= ADMM_DDP_CEN(DYNCST, DYNCST_primal, x0, u0, Op);
@@ -101,8 +105,8 @@ function y = robot_dynamics(x, u, i)
     K_d  = repmat(K(:,i), 1,size(x,2)/numel(i));
     
     % states - velocity
-    xd  = x(14:26,:,:);
-    xdd = fdyn_dynamics(x,u,RC_d, K_d);
+    xd  = x(8:14, :, :);
+    xdd = fdyn_dynamics(x, u, RC_d, K_d);
     
     % modify here
     dy  = [xd; xdd(1:end,:)];     % change in state
@@ -112,7 +116,7 @@ function y = robot_dynamics(x, u, i)
 
 
 function c = robot_cost(x, u, i)
-    global xd tool
+    global xd
     % cost function for robot problem
     % sum of 3 terms:
     % lu: quadratic cost on controls
@@ -122,17 +126,17 @@ function c = robot_cost(x, u, i)
     final = isnan(u(1,:));
     u(:,final)  = 0;
 
-    cu  = 5e-3*[1 1 1 1 1 1 ones(1,7)];         % control cost coefficients
+    cu  = 5e-3 * [ones(1,7)];                        % control cost coefficients
 
 
-    cf  = 0*5e-1*[0.0*ones(1,7) 10 10 0 0.1 0.1 0.1 0.0*ones(1,7) 0 0 0 0 0 0 1 1 10];      % final cost coefficients
-    pf  = 0*4e-1*[0.0*ones(1,7) .1 .1 .0 0.1 0.1 0.1 0.0*ones(1,7) 0 0 0 0 0 0 .01 .01 .1]';    % smoothness scales for final cost
+    cf  = 0*5e-1 * [0.0*ones(1,7) 0.0*ones(1,7) 1 1 10];         % final cost coefficients
+    pf  = 0*4e-1 * [0.0*ones(1,7) 0.0*ones(1,7) .01 .01 .1]';    % smoothness scales for final cost
 
-    cx  = 5e-1*[0.0*ones(1,7) 80 80 1 0.1 0.1 0.1 0.1*ones(1,7) 10.0 10.0 10.0 0.0 0.0 0.0 0 0 10];        % running cost coefficients
-    px  = 4e-1*[0.0*ones(1,7) .1 .1 0.1 0.1 0.1 0.1 0.01.*ones(1,7) 0.10 0.10 0.10 0.10 0.00 0.00 .0 .00 .1]';           % smoothness scales for running cost
+    cx  = 5e-1 * [0.0*ones(1,7) 0.1*ones(1,7)  0 0 10];        % running cost coefficients
+    px  = 4e-1 * [0.0*ones(1,7) 0.01.*ones(1,7) .0 .00 .1]';           % smoothness scales for running cost
 
-    cx_b = 1e2*[10 10 0];
-    px_b = 1e2*[10 10 0]';
+    cx_b = 1e2 * [10 10 0];
+    px_b = 1e2 * [10 10 0]';
     
     % control cost
     lu  = cu * u.^2;
@@ -140,7 +144,6 @@ function c = robot_cost(x, u, i)
     x_d = repmat(xd(:,i), 1,size(x,2)/numel(i));
     
     % final cost
-    
     if any(final)
        % fk       = fkine(rb, x(1:2,final));
        % llf      = cf * sabs(fk(:,end),pf);
@@ -151,46 +154,10 @@ function c = robot_cost(x, u, i)
        lf    = 0;
     end
 
-    % running cost
-    %     fk   = fkine(rb, x(1:2,:));
-    %     lx   = cx * sabs(fk(1:2,end),px);
-    
-    % base of the ee
-
-    %     R = eul2rotm(x(4:6,:)', 'ZYX');
-    %     v = R .* tool';
-    %     v = v(:,3,:);
-    %     p = x(1:3,:) - reshape(v,3,[],1);
-        
-    % cost for the base movement
-    %     lx_b = cx_b * sabs(p, px_b);
-
-    % error from forward function
-    pa_ = FK_kuka_vec(x(1:7,:));
-    
-    if (size(pa_,3)>1)
-        pa      = permute(pa_(1:3,end,:),[1 3 2]);
-    else
-        pa      = pa_(1:3,end,:);
-    end
-    
-    rot_eul  = rotm2eul(pa_(1:3,1:3,:),'ZYX');
-    rot_eul  = rot_eul';
-    temp     = rot_eul.^2;
-    err_fk_0 = sum(temp,1); % desired ZYX = [0 0 0];
-    
-    
-    % position at the centroid
-    % x_c = x(8:10,:);% - sum(permute(permute(pa_(1:3,1:3,:), [2 1 3]) .* tool,[2 1 3]),2);
-    
-    % err_fk = sum((pa - x(8:10,:) + sum(permute(permute(pa_(1:3,1:3,:), [2 1 3]) .* tool,[2 1 3]),2)).^2,1);
-    err_fk  = sum((pa - x(8:10,:) + tool).^2,1);
-    
-    % cost for the ee movement.
-    lx    = cx * sabs(x(:,:)-x_d, px);
+    lx    = cx * sabs(x(:,:) - x_d, px);
     
     % total cost
-    c     = lu + lx + 0*lf + 1200 * err_fk + 20 * err_fk_0;
+    c     = lu + lx + lf;
 
 
 function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar)
@@ -199,7 +166,6 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar)
     % lu: quadratic cost on controls
     % lf: final cost on distance from target parking configuration
     % lx: running cost on distance from origin to encourage tight turns
-    global xd tool RC
     m = size(u,1);
     n = size(x,1);
 
@@ -209,19 +175,14 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar)
     
     cu  = 5e-3*[1 1 1 1 1 1 ones(1,7)];         % control cost coefficients
 
-    cf  = 0*5e-1*[0.0*ones(1,7) 10 10 0 0.1 0.1 0.1 0.0*ones(1,7) 0 0 0 0 0 0 1 1 10];      % final cost coefficients
-    pf  = 0*4e-1*[0.0*ones(1,7) .1 .1 .0 0.1 0.1 0.1 0.0*ones(1,7) 0 0 0 0 0 0 .01 .01 .1]';    % smoothness scales for final cost
+    cf  = 0*5e-1 * [0.0*ones(1,7) 0.0*ones(1,7) 1 1 10];         % final cost coefficients
+    pf  = 0*4e-1 * [0.0*ones(1,7) 0.0*ones(1,7) .01 .01 .1]';    % smoothness scales for final cost
 
-    cx  = 5e-1*[0.0*ones(1,7) 80 80 1 0.1 0.1 0.1 0.1*ones(1,7) 10.0 10.0 10.0 0.0 0.0 0.0 0 0 10];        % running cost coefficients
-    px  = 4e-1*[0.0*ones(1,7) .1 .1 0.1 0.1 0.1 0.1 0.01.*ones(1,7) 0.10 0.10 0.10 0.10 0.00 0.00 .0 .00 .1]';           % smoothness scales for running cost
+    cx  = 5e-1 * [0.0*ones(1,7) 0.1*ones(1,7) 0 0 10];           % running cost coefficients
+    px  = 4e-1 * [0.0*ones(1,7) 0.01.*ones(1,7) .0 .00 .1]';     % smoothness scales for running cost
 
-    % cx_b = 1e1*[10 10 0];
-    % px_b = 1e1*[10 10 0]';
-    
     % control cost
     lu    = cu * u.^2 + (rhao(2)/2) * ones(1,m) * (u-u_bar).^2;
-    % sum(u.*((roll/2)*eye(m)*u),1) - roll*sum(u_bar.*u,1) +...
-    % (roll/2)*sum(u_bar.*u_bar,1);%(roll/2)*norm(u - u_bar)^2;
 
     % final cost
     if any(final)
@@ -232,50 +193,14 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar)
        lf    = 0;
     end
 
-    % base of the ee
-    %     R = eul2rotm(x(4:6,:)', 'ZYX');
-    %     v = R .* tool';
-    %     v = v(:,3,:);
-    %     p = x(1:3,:) - reshape(v,3,[],1);
-        
-    x_d  = repmat(xd(:,i), 1,size(x,2)/numel(i));
-    RC_d = repmat(RC(:,1), 1,size(x,2)/numel(i));
-    
-    % cost for the base movement
-    % lx_b = cx_b * sabs(p, px_b);
-    
-    
-    % error from forward function
-    pa_ = FK_kuka_vec(x(1:7,:));
-    
-    if (size(pa_,3)>1)
-        pa      = permute(pa_(1:3,end,:),[1 3 2]);
-    else
-        pa      = pa_(1:3,end,:);
-    end
-    
-    rot_eul  = rotm2eul(pa_(1:3,1:3,:),'ZYX');
-    rot_eul  = rot_eul';
-    temp     = rot_eul.^2;
-    err_fk_0 = sum(temp,1); % desired ZYX = [0 0 0];
-    
-    % position at the centroid
-    % err_fk = sum((pa -  + sum(permute(permute(pa_(1:3,1:3,:), [2 1 3]) .* tool,[2 1 3]),2)).^2,1);
-    
-    % err_fk  = pa - x(8:10,:);
-    err_fk  = sum((pa - x(8:10,:) + tool).^2,1);
-    
     % running cost
-    lx     = cx*sabs(x(:,:)-x_d,px) + (rhao(1)/2)*ones(1,n)*(x-x_bar).^2; % sum(x.*((roll/2)*eye(n)*x),1) - roll*sum(x_bar.*x,1) + (roll/2)*sum(x_bar.*x_bar,1);%(roll/2)*norm(x - x_bar)^2;
-    x_c    = getCENT(x, RC_d(i));
+    lx     = cx * sabs(x(:,:)-x_d, px) + (rhao(1)/2) * ones(1,n)*(x-x_bar).^2; % sum(x.*((roll/2)*eye(n)*x),1) - roll*sum(x_bar.*x,1) + (roll/2)*sum(x_bar.*x_bar,1);%(roll/2)*norm(x - x_bar)^2;
     
-    lx_CEN = (rhao(3)/2)*ones(1,1)*(x_c-c_bar).^2;
     
     % total cost
-    c     = lu + lx + 0*lf + lx_CEN + 1200*err_fk + 20*err_fk_0; 
+    c     = lu + lx + lf; 
 
-
-% get the 
+% get the RCC TODO
 function y = getCENT(x, R)
 m = 0.3;
 y = m * sum(x(21:23,:).^2,1) ./ R';
@@ -288,7 +213,7 @@ y = pp( sqrt(pp(x.^2,p.^2)), -p);
 
 
 
-function [f,c,fx,fu,fxx,fxu,fuu,cx,cu,cxx,cxu,cuu] = robot_dyn_cst(x,u,i,full_DDP)
+function [f, c, fx, fu, fxx, fxu, fuu, cx, cu, cxx, cxu, cuu] = robot_dyn_cst(x, u, i, full_DDP)
 % combine car dynamics and cost
 % use helper function finite_difference() to compute derivatives
 if nargout == 2

@@ -77,6 +77,7 @@ function inertial_params = KUKA_Inertial_Params(lbr)
         L_7xx L_7xy L_7xz L_7yy L_7yz L_7zz l_7x l_7y l_7z m_7 fv_7 fc_7];
     
     save('./inertial_params_KUKA.mat', 'inertial_params');
+
     %% Outputs the transformation between given two frames in the first
     %  frame.
     function trans = getTransform(configuration,source, target)

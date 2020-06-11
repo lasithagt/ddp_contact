@@ -1,5 +1,5 @@
-function [thetalist, thetalist_d, success] ...
-         = IKinSpace_modified_second_order(Slist, M, T, thetalist0, thetalistd0, eomg, ev)
+function [thetalist, success] ...
+         = IKinSpace_modified(Slist, M, T, thetalist0, eomg, ev)
 % *** CHAPTER 6: INVERSE KINEMATICS ***
 % Takes Slist: The joint screw axes in the space frame when the manipulator
 %              is at the home position, in the format of a matrix with the
@@ -45,13 +45,10 @@ function [thetalist, thetalist_d, success] ...
 % success =
 %     1
 
-alpha       = 1;
-thetalist   = thetalist0;
-thetalist_d = thetalistd0;
-i           = 0;
-maxiterations = 1;
-% maxiterations = 20;
-
+alpha = 4;
+thetalist = thetalist0;
+i = 0;
+maxiterations = 50;
 Tsb = FKinSpace(M, Slist, thetalist);
 Vs = Adjoint(Tsb) * se3ToVec(MatrixLog6(TransInv(Tsb) * T));
 err = norm(Vs(1: 3)) > eomg || norm(Vs(4: 6)) > ev;
@@ -62,46 +59,46 @@ while err && i < maxiterations
     J = JacobianSpace(Slist, thetalist);
     
     W = eye(7);
+%     W = diag([5 1 2 1 2 1 2]);
 
-
-    if rcond(J*J') < 0.01
+    if rcond(J*J')<0.01
         JINV = W\J'/(J/W*J'+0.1*eye(6));
     else 
         JINV = W\J'/(J/W*J');
     end
+    thetalist_ = thetalist + 1*JINV*Vs; 
     
-    thetalist_d = thetalist_d + 1 * JINV * (Vs - J * thetalist_d ...
-                - JacSpaceDot(Slist, thetalist, thetalist_d) * thetalist_d) ; 
-    
-    thetalist_  = thetalist + thetalist_d;
-    % thetalist_  = thetalist_d;
     
     Tsb = FKinSpace(M, Slist, thetalist_);
-    Vs  = Adjoint(Tsb) * se3ToVec(MatrixLog6(TransInv(Tsb) * T));
+    Vs = Adjoint(Tsb) * se3ToVec(MatrixLog6(TransInv(Tsb) * T));
     
     % line search
     for j=1:numel(alpha)
+        theta_null = alpha(j) * (eye(7) - J(1:3,:)'*JINV(:,1:3)')  * null_space(Slist, thetalist)';
         
-    %   theta_null = alpha(j) * (eye(7) - J(1:3,:)'*JINV(:,1:3)')  * null_space(Slist, thetalist)';
-        Tsb_ = FKinSpace(M, Slist, thetalist_);
-        Vs_  = Adjoint(Tsb_) * se3ToVec(MatrixLog6(TransInv(Tsb_) * T));
+        Tsb_ = FKinSpace(M, Slist, thetalist_+theta_null);
+        Vs_ = Adjoint(Tsb_) * se3ToVec(MatrixLog6(TransInv(Tsb_) * T));
         
-    %         if (norm(Vs_(4:6)) > norm(Vs(4:6)))
-    %             % Vs = Vs;
-    %             thetalist = thetalist_;
-    %         else
-    %             Vs= Vs_;
-    %             thetalist = thetalist_;
-    %             break
-    %         end
+        if (norm(Vs_(4:6))>norm(Vs(4:6)))
+            % Vs = Vs;
+            thetalist = thetalist_;
+%             Vs= Vs_;
+%             thetalist = thetalist_+theta_null;
+        else
+            Vs= Vs_;
+            thetalist = thetalist_+theta_null;
+            break
+        end
+        thetalist = mod(thetalist,2*pi);
     
-        Vs= Vs_;
-        thetalist = thetalist_;
     end
-    
-%     norm(Vs(1: 3))
-%     norm(Vs(4: 6))
-    
+   
+%     err_val_n = norm(Vs(4: 6));
+%     if (err_val_n > err_val)
+%         break
+%     end
+%     err_val = err_val_n;
+    norm(Vs);
     err = norm(Vs(1: 3)) > eomg || norm(Vs(4: 6)) > ev;
     i = i + 1;
 end
@@ -109,29 +106,23 @@ success = ~ err;
 end
 
 
-function Jd = JacSpaceDot(Slist, q, qd)
-    e  = 0.00001;
-    J1 = JacobianSpace(Slist, q);
-    q_ = q + qd * e;
-    J2 = JacobianSpace(Slist, q_);
-    Jd = (J2 - J1) ./ e;
-end
-
 function dcdq = null_space(S, q_init)
-    global input
 
-    f = @(w)det(J_desired(J(w),w)*0.00 - J(w)*J(w)');
-    q = q_init;
+    f  = @(w)det(J_desired(J(w),w)*0.00 - J(w)*J(w)');
+    q  = q_init;
     Jq = J(q);
-    d = det(Jq(1:3,:)*Jq(1:3,:)');
-        q_lim_grad = exp((q - input.q_min')) + exp((q - input.q_max'));
+    d  = det(Jq(1:3,:) * Jq(1:3,:)');
+    
+    q_min = deg2rad([-169 -119 -169 -119 -169 -119 -179]'); q_max = -q_min;
+    q_lim_grad = exp((q - q_min)) + exp((q - q_max));
     %     for i = 1:10
     %         d = d + finite_difference(f,q) * ones(7,1)*0.1;
     %     end
     %     cost = @(q)d - det(J(q_init)*J(q_init)');
-    % dcdq = finite_difference(f, q);
-    dcdq = 0*q_lim_grad';
     
+    dcdq = finite_difference(f, q);% + q_lim_grad';
+%     dcdq = q_lim_grad';
+
     function J_v = J(w)
         J_v = JacobianSpace(S,w);
         J_v = J_v(1:3,:);
