@@ -63,17 +63,17 @@ while err && i < maxiterations
     
     W = eye(7);
     % In case, if this run into a singularity
-    if rcond(J * J') < 0.01
+    if rcond(J * J') < 0.001
         JINV = W\J'/(J/W*J'+0.01*eye(6));
     else 
         JINV = W\J'/(J/W*J');
     end
     
-    thetalist_d = thetalist_d + 1 * JINV * (Vs - J * thetalist_d ...
+    thetalist_d = thetalist_d + 0.1 * JINV * (Vs - J * thetalist_d ...
                 - JacSpaceDot(Slist, thetalist, thetalist_d) * thetalist_d) ...
                 + (rho(1)) * (thetalist_d - qd_bar); 
   
-    thetalist_  = thetalist + thetalist_d + (rho(2) / 2) * (thetalist - q_bar);
+    thetalist_  = thetalist + 1*thetalist_d + (rho(2) / 2) * (thetalist - q_bar);
     
     Tsb = FKinSpace(M, Slist, thetalist_);
     Vs  = Adjoint(Tsb) * se3ToVec(MatrixLog6(TransInv(Tsb) * T));

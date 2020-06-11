@@ -23,15 +23,22 @@ Op.lims  = [-pi pi;             % wheel angle limits (radians)
 Op.plot  = 1;                    % plot the derivatives as well
 Op.maxIter = 10;
 
-
-% desired path to track
-t    = linspace(0,2*pi,T+1);
-r    = 0.04;
+global x_des
+%% desired path to track
+t    = linspace(0, 2*pi, T+1);
+r    = 0.06;
 xd_x = r * cos(t);
-xd_y = r * sin(2*t); % linspace(-0.05,0.05,numel(t)); %\
-xd_z = (1.1608+0.136) * ones(1,numel(t));
-xd_f = -0.5 * sin(1*t) - 1.5;
+xd_y = r * sin(2*t);
+xd_z = (0.8) * ones(1,numel(t));
+Rd_r = 0 * ones(1, numel(t));
+Rd_p = 0 * ones(1, numel(t));
+Rd_y = 0 * ones(1, numel(t));
 % [xd_x, xd_y, xd_z] = lissajous_curve(t, 1.1608);
+
+xd_f = -0.5 * sin(1*t) - 1.5;
+
+x_des = [xd_x; xd_y; xd_z; Rd_r; Rd_p; Rd_y];
+
 
 
 % calculate the center of curvature.
@@ -79,8 +86,6 @@ else
     error("Inverse Solution Not Found...")
 end
 
-
-
 x0       = [q0' zeros(1,7) 0 0 0]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
 u0       = -0. + zeros(7, T);                                                     % initial controls
 
@@ -88,9 +93,14 @@ u0 (3,1) = 0;
 q_des    = repmat(q0, 1, numel(t));
 xd       = [q_des; zeros(7,numel(t)); xd_f];
 
+%% For testing IK
+% q_bar  = zeros(7, size(x_des,2));
+% qd_bar = zeros(7, size(x_des,2));
+% 
+% [thetalist, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], q_bar, qd_bar, 1);
 
-% === run the optimization! ===
-[x,u]= ADMM_DDP_BLKS(DYNCST, DYNCST_primal, x0, u0, Op);
+%% === run the optimization! ===
+[x,u]= ADMM_DDP_3BLKS(DYNCST, DYNCST_primal, x0, u0, Op);
 
 % animate the resulting trajectory
 
@@ -109,7 +119,7 @@ function y = robot_dynamics(x, u, i)
     
     % states - velocity
     xd  = x(8:14, :, :);
-    xdd = fdyn_dynamics(x, u, RC_d, K_d);
+    xdd = fdyn_dynamics_admm_3blk(x, u, RC_d, K_d);
     
     % modify here
     dy  = [xd; xdd(1:end,:)];     % change in state
