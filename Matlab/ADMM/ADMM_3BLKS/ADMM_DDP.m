@@ -1,6 +1,5 @@
-function [x, u, cost] = ADMM_DDP_3BLKS(DYNCST, DYNCST_primal, x0, u0, Op)
+function [x, u, cost] = ADMM_DDP(DYNCST, DYNCST_primal, x0, u0, Op)
 %---------------------- user-adjustable parameters ------------------------
-global RC K x_des
 % --- initial sizes and controls
 n   = size(x0,1);          % dimension of state vector
 m   = size(u0, 1);          % dimension of control vector
@@ -13,16 +12,15 @@ u   = u0;                   % initial control sequence
 %         'dcost',nan);
 % trace = repmat(trace,[min(Op.maxIter,1e6) 1]);
 % trace(1).iter = 1;
-iter = 5;
+iter = 1;
 
-        
 % --- initial trajectory
-[x,un,c0]  = traj_sim(x0, u0, DYNCST);
-c01        = sum(c0(:));
+
+[x,un,c0]  = traj_sim(x0,u0,DYNCST);
+c01 = sum(c0(:));
 
 % [x0b,u0b,~]  = initialtraj(x0,u0_bar,DYNCST);
-u          = un;
-c          = 0.3 * sum(x(21:23,:).^2,1) ./ RC';
+u = un;
 
 % user plotting
 % Op.plotFn(x);
@@ -35,86 +33,69 @@ last_head   = print_head;
 verbosity   = 1;
 
 if verbosity > 0
-    fprintf('\n =========== begin ADMM =========== \n');
+    fprintf('\n=========== begin ADMM ===========\n');
 end
 
 % Initialize dual variebles
-rhao   = [2,1.15,1];
-
-
-alpha  = 1.5;
+rhao = [1,2.15];
+alpha = 1.5;
 alphak = 1;
-yita   = 0.999;
-it2    = 5;
+yita = 0.999;
+it2 = 10;
 
 % Primal variables
 xnew = x;
 unew = u;
 u_bar = ones(size(u));
 x_bar = ones(size(x));
-c_bar = ones(size(c));
-
 alphak_v = ones(1,it2+1);
 
 % Dual variables
 x_lambda = zeros(size(x));
-c_lambda = zeros(size(c));
 u_lambda = zeros(size(u));
 
 % ck = (1/roll)*norm(x_lambda-x_lambda2)^2 + (1/roll)*norm(u_lambda-u_lambda2)^2 + roll*norm(x_bar-x_bar2)^2 + roll*norm(u_bar-u_bar2)^2;
     
 res_u = zeros(1,it2);
 res_x = zeros(1,it2);
-res_c = zeros(1,it2);
 res_ulambda = zeros(1,it2);
 res_xlambda = zeros(1,it2);
-res_clambda = zeros(1,it2);
 costcomp = zeros(1, it2);
-
-plot_IK = 1;
     
 %% ADMM iteration
 for i = 1:it2
 
     if i < 1000
     %% Original simple ADMM 
-    %         %====== proximal operator to minimize to cost
-    %         [xnew, unew, ~] = iLQG2(DYNCST, DYNCST2, x0, unew, roll, x_bar-x_lambda,u_bar-u_lambda, Op);
-    % 
-    %         %====== project operator to satisfy the constraint
-    %         x_bar_old = x_bar;
-    %         u_bar_old = u_bar;
-    %         [x_bar, u_bar] = proj(xnew+x_lambda, unew+u_lambda, Op.lims);
-    % 
-    %         %====== dual variables update
-    %         x_lambda = x_lambda + xnew - x_bar;
-    %         u_lambda = u_lambda + unew - u_bar;
+%         %====== proximal operator to minimize to cost
+%         [xnew, unew, ~] = iLQG2(DYNCST, DYNCST2, x0, unew, roll, x_bar-x_lambda,u_bar-u_lambda, Op);
+% 
+%         %====== project operator to satisfy the constraint
+%         x_bar_old = x_bar;
+%         u_bar_old = u_bar;
+%         [x_bar, u_bar] = proj(xnew+x_lambda, unew+u_lambda, Op.lims);
+% 
+%         %====== dual variables update
+%         x_lambda = x_lambda + xnew - x_bar;
+%         u_lambda = u_lambda + unew - u_bar;
         
     %% ADMM with relaxtion 
         %====== proximal operator to minimize to cost
         % robot manipulator
+        [xnew, unew, ~] = iLQG_ADMM(DYNCST, DYNCST_primal, x0, unew, rhao, x_bar-x_lambda,u_bar-u_lambda, Op);
 
-        [xnew, unew, ~] = iLQG_ADMM_BLKS(DYNCST, DYNCST_primal, x0, unew, rhao, x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, Op);
-        
-        % prototype for the IK block
-        % [thetalist, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), rho, q_bar, qd_bar, plot_IK);
-        
-        cnew            = 0.3 * sum(xnew(21:23,:).^2,1) ./ RC';
-        
+
         % Relaxtion
-        xnew2 = alpha * xnew + (1-alpha) * x_bar;
-        cnew2 = alpha * cnew + (1-alpha) * c_bar;
-        unew2 = alpha * unew + (1-alpha) * u_bar;
+        xnew2 = alpha*xnew + (1-alpha)*x_bar;
+        unew2 = alpha*unew + (1-alpha)*u_bar;
 
         %====== project operator to satisfy the constraint
         x_bar_old = x_bar;
-        c_bar_old = c_bar;
         u_bar_old = u_bar;
-        [x_bar, c_bar, u_bar] = proj(xnew2+x_lambda, cnew2+c_lambda, unew2+u_lambda, Op.lims);
+        [x_bar, u_bar] = proj(xnew2+x_lambda, unew2+u_lambda, Op.lims);
 
         %====== dual variables update
         x_lambda = x_lambda + xnew2 - x_bar;
-        c_lambda = c_lambda + cnew2 - c_bar;
         u_lambda = u_lambda + unew2 - u_bar;
         
 
@@ -196,29 +177,26 @@ for i = 1:it2
     end
     %%
     % ====== residue ======= %
-    res_u(:,i) = norm(unew - u_bar);
-    res_x(:,i) = norm(xnew - x_bar);
-    res_c(:,i) = norm(cnew - c_bar);
-    
+    res_u(:,i)       = norm(unew - u_bar);
+    res_x(:,i)       = norm(xnew - x_bar);
     res_ulambda(:,i) = rhao(2) * norm(u_bar - u_bar_old);
     res_xlambda(:,i) = rhao(1) * norm(x_bar - x_bar_old);
-    res_clambda(:,i) = rhao(3) * norm(c_bar - c_bar_old);
-    
+
     [~,~,cost22]  = traj_sim(x0, unew, DYNCST);
     costcomp(:,i) = sum(cost22(:));
     
     % ====== varying penalty parameter ======== %
-%     if i > 5
-%         if res_u(:,i) > 10*res_ulambda(:,i)
-%             rhao(2) = 2*rhao(2);
-%             u_lambda = u_lambda/2;
-%             x_lambda = x_lambda/2;
-%         elseif res_ulambda(:,i) > 10*res_u(:,i)
-%             rhao(1) = rhao(1)/2;
-%             u_lambda = u_lambda*2;
-%             x_lambda = x_lambda*2;
-%         end
-%     end
+    if i > 5
+        if res_u(:,i) > 10*res_ulambda(:,i)
+            rhao(2) = 2*rhao(2);
+            u_lambda = u_lambda/2;
+            x_lambda = x_lambda/2;
+        elseif res_ulambda(:,i) > 10*res_u(:,i)
+            rhao(1) = rhao(1)/2;
+            u_lambda = u_lambda*2;
+            x_lambda = x_lambda*2;
+        end
+    end
 end
 
 figure(15)
@@ -231,10 +209,9 @@ subplot(1,2,1)
 l = 1:it2;
 plot(l,res_u);
 hold on;
-plot(l,res_x);
-plot(l,res_ulambda);
-plot(l,res_xlambda);
-plot(l,res_clambda);
+plot(l,log10(res_x));
+plot(l,log10(res_ulambda));
+plot(l,log10(res_xlambda));
 title('residue of primal and dual variebles for accelerated ADMM')
 xlabel('ADMM iteration')
 ylabel('residue')
@@ -322,26 +299,19 @@ function [xnew,unew,cnew] = traj_sim(x0, u0, DYNCST)
     for i = 1:N
         [xnew(:,i+1), cnew(:,i)]  = DYNCST(xnew(:,i), unew(:,i),i);
     end
-    
-    
     [~, cnew(:,N+1)] = DYNCST(xnew(:,N+1),nan(m,1),i);
 
 
-function [x2, c2, u2] = proj(xnew, xnew_cen, unew, lims)
+function [x2, u2] = proj(xnew, unew, lims)
     % Project operator(control-limit): simply clamp the control output
     N = size(unew, 2);
     m = size(unew, 1);
     n = size(xnew, 1);
     u2 = zeros(m,N);
     x2 = xnew;
-    c2 = xnew_cen;
 
     for i =1:N
-        
-        if ((xnew_cen) > 0.5*xnew(end,i+1))
-            c2(i+1) = 0.5*xnew(end,i+1);
-        end
-        
+
         for j = 1:n
             if xnew(j,i+1) > lims(1,2)
                 x2(j,i+1) = lims(1,2);
@@ -361,4 +331,4 @@ function [x2, c2, u2] = proj(xnew, xnew_cen, unew, lims)
                 u2(k,i) = unew(k,i);
             end
         end
-    end
+end
