@@ -65,7 +65,7 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
         
         % frictional force
         F_f_dot  = mu * k * x_dot(3)*vel_dir + 3 * mu * (2*nu-1) *(k * x_dot(3) * d ...
-            + f_ee(3) * x_dot(3)) * vel_dir / (10 * R) + 14.02 * xdd_e;
+            + f_ee(3) * x_dot(3)) * vel_dir / (10 * R) + 14.02 * xdd_e(1:3);
         
 
         if (norm(K_D(:,i)) == 0)
@@ -77,8 +77,8 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
         m = 1;
         F_normal_dot = 2 * m * x_dot(1:3) .* xdd_e(1:3); % / RC(i);
 
-        F        = F_f - k  * x_dot(3) * [0;0;1] - xdd_e(3) * [0;0;1] + F_normal_dot * K_DIR;
-        ret(:,i) = [qdd; 0*F];
+        F_dot        = F_f_dot - k  * x_dot(3) * [0;0;1] - xdd_e(3) * [0;0;1] + F_normal_dot .* K_DIR;
+        ret(:,i) = [qdd; 0*F_dot];
         
     end
     

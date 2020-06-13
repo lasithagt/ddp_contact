@@ -20,6 +20,7 @@ iter = 5;
 x_init = zeros(n,N+1);
 u_init = zeros(m,N+1);
 c_init = zeros(1,N+1);
+
 [x,un,~]  = traj_sim(x0, u0, DYNCST,zeros(1,5),x_init,c_init,u_init,zeros(7,N+1),zeros(7,N+1));
 
 % [x0b,u0b,~]  = initialtraj(x0,u0_bar,DYNCST);

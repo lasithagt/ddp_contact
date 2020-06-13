@@ -89,7 +89,7 @@ u0       = -0. + zeros(7, T);                                                   
 
 u0 (3,1) = 0;
 q_des    = repmat(q0, 1, numel(t));
-xd       = [q_des; zeros(7,numel(t)); xd_f];
+xd       = [q_des; zeros(7,numel(t)); zeros(2,numel(t)) ;xd_f];
 
 %% For testing IK
 % q_bar  = zeros(7, size(x_des,2));
@@ -177,16 +177,16 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     % lu: quadratic cost on controls
     % lf: final cost on distance from target parking configuration
     % lx: running cost on distance from origin to encourage tight turns
-    global xd
+    global xd RC
     m = size(u,1);
     n = size(x,1);
 
     final = isnan(u(1,:));
     u(:,final)  = 0;
     u_bar(:,final) = 0;
-    cen   = 0.3 * sum(x(15:17,:).^2,1) ./ RC';
+    cen   = 0.3 * sum(x(15:17,:).^2,1) ./ RC(i)';
     
-    cu  = 5e-3*[1 1 1 1 1 1 ones(1,7)];         % control cost coefficients
+    cu  = 5e-3*[ones(1,7)];         % control cost coefficients
 
     cf  = 0*5e-1 * [0.0*ones(1,7) 0.0*ones(1,7) 1 1 10];         % final cost coefficients
     pf  = 0*4e-1 * [0.0*ones(1,7) 0.0*ones(1,7) .01 .01 .1]';    % smoothness scales for final cost
@@ -195,6 +195,7 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     px  = 4e-1 * [0.0*ones(1,7) 0.01.*ones(1,7) .0 .00 .1]';     % smoothness scales for running cost
 
     % control cost
+
     lu    = cu * u.^2 + (rhao(2)/2) * ones(1,m) * (u-u_bar).^2;
 
     x_d = repmat(xd(:,i), 1, size(x,2)/numel(i));
@@ -208,6 +209,7 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
        lf    = 0;
     end
 
+    
     % running cost
     lx     = cx * sabs(x(:,:)-x_d, px) + (rhao(1)/2) * ones(1,n)*(x-x_bar).^2 + ...
         (rhao(3)/2)*(cen-c_bar).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,:)-thetalist_bar).^2 + ...
