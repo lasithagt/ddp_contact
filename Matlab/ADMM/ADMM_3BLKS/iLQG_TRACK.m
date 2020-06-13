@@ -1,5 +1,5 @@
 
-function [x, u, L, Vx, Vxx, cost, trace, stop] = iLQG_ADMM_BLKS(DYNCST, DYNCST_primal, x0, u0, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar, Op)
+function [x, u, L, Vx, Vxx, cost, trace, stop] = iLQG_TRACK(DYNCST, x0, u0, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar, Op)
 %---------------------- user-adjustable parameters ------------------------
 defaults = {'lims',           [],...            control limits
             'parallel',       true,...          use parallel line-search?
@@ -66,7 +66,7 @@ trace(1).dlambda = dlambda;
 if size(x0,2) == 1
     diverge = true;
     for alpha = Op.Alpha
-        [x,un,cost]  = forward_pass(x0(:,1),alpha*u,[],[],[],1,DYNCST,DYNCST_primal,lims,[],rhao,x_bar, c_bar,u_bar, thetalist_bar, thetalistd_bar);
+        [x,un,cost]  = forward_pass(x0(:,1),alpha*u,[],[],[],1,DYNCST,lims,[],rhao,x_bar, c_bar,u_bar, thetalist_bar, thetalistd_bar);
         
         % simplistic divergence test
          if all(abs(x(:)) < 1e8)
@@ -125,7 +125,7 @@ for iter = 1:Op.maxIter
     %====== STEP 1: differentiate dynamics and cost along new trajectory
     if flgChange
         t_diff = tic;
-        [~,~,fx,fu,fxx,fxu,fuu,cx,cu,cxx,cxu,cuu]   = DYNCST(x, [u nan(m,1)], 1:N+1);
+        [~,~,fx,fu,fxx,fxu,fuu,cx,cu,cxx,cxu,cuu]   = DYNCST(x, [u nan(m,1)], rhao, x_bar, c_bar, [u_bar nan(m,1)], thetalist_bar, thetalistd_bar, 1:N+1);
         
         % [cx,cu,cxx,cxu,cuu] = preprocessing(x,u,cx,cu,cxx,cxu,cuu,rhao,x_bar,c_bar, u_bar);
         trace(iter).time_derivs = toc(t_diff);
@@ -171,7 +171,7 @@ for iter = 1:Op.maxIter
     if backPassDone
         t_fwd = tic;
         if Op.parallel  % parallel line-search
-            [xnew,unew,costnew] = forward_pass(x0 ,u, L, x(:,1:N), l, Op.Alpha, DYNCST,DYNCST_primal,lims,Op.diffFn,rhao,x_bar,c_bar,u_bar, thetalist_bar, thetalistd_bar);
+            [xnew,unew,costnew] = forward_pass(x0 ,u, L, x(:,1:N), l, Op.Alpha, DYNCST,lims,Op.diffFn,rhao,x_bar,c_bar,u_bar, thetalist_bar, thetalistd_bar);
             Dcost               = sum(cost(:)) - sum(costnew,2);
             [dcost, w]          = max(Dcost);
             alpha               = Op.Alpha(w);
@@ -190,7 +190,7 @@ for iter = 1:Op.maxIter
             end
         else            % serial backtracking line-search
             for alpha = Op.Alpha
-                [xnew,unew,costnew]   = forward_pass(x0 ,u+l*alpha, L, x(:,1:N),[],1,DYNCST,DYNCST_primal,lims,Op.diffFn,rhao,x_bar, c_bar,u_bar, thetalist_bar, thetalistd_bar);
+                [xnew,unew,costnew]   = forward_pass(x0 ,u+l*alpha, L, x(:,1:N),[],1,DYNCST,lims,Op.diffFn,rhao,x_bar, c_bar,u_bar, thetalist_bar, thetalistd_bar);
                 dcost    = sum(cost(:)) - sum(costnew(:));
                 expected = -alpha*(dV(1) + alpha*dV(2));
                 if expected > 0
@@ -326,70 +326,55 @@ else
     error('Failure: no iterations completed, something is wrong.')
 end
 
-% this function is not being used.
-function [cx,cu,cxx,cxu,cuu] = preprocessing(x,u,cx,cu,cxx,cxu,cuu,rhao,x_bar,c_bar,u_bar, thetalist_bar, thetalistd_bar)
-    N = size(cx,2);
-    n = numel(cx)/N;
-    m = numel(cu)/N;
-    rhao1 = rhao(1);
-    rhao2 = rhao(2);
-    rhao3 = rhao(3);
-    for i = 1:N-1
-        cx(:,i) = cx(:,i) + rhao1*x(:,i) - rhao1*x_bar(:,i);
-        
-        cu(:,i) = cu(:,i) + rhao2*u(:,i) - rhao2*u_bar(:,i);
-        cxx(:,:,i) = cxx(:,:,i) + rhao1*eye(n);
-        cuu(:,:,i) = cuu(:,:,i) + rhao2*eye(m);
-        cxu(:,:,i) = cxu(:,:,i);
-    end
-    cx(:,N) = cx(:,N) + rhao1*x(:,N) - rhao1*x_bar(:,N);
-    cxx(:,:,N) = cxx(:,:,N) + rhao1*eye(n);
+function [xnew,forcenew,unew,cnew] = forward_pass(x0,u,L,x,du,Alpha,DYNCST,lims,diff,...
+    rhao,x_bar,c_bar,u_bar, thetalist_bar, thetalistd_bar)
+% parallel forward-pass (rollout)
+% internally time is on the 3rd dimension, 
+% to facillitate vectorized dynamics calls
 
+n        = size(x0,1);
+K        = length(Alpha);
+K1       = ones(1,K); % useful for expansion
+m        = size(u,1);
+N        = size(u,2);
+nf       = size(f,1);
 
-function [xnew,unew,cnew] = forward_pass(x0,u,L,x,du,Alpha,DYNCST,DYNCST_primal,lims,diff,rhao,x_bar,c_bar,u_bar, thetalist_bar, thetalistd_bar)
-    % parallel forward-pass (rollout)
-    % internally time is on the 3rd dimension, 
-    % to facillitate vectorized dynamics calls
+xnew        = zeros(n,K,N);
+xnew(:,:,1) = x0(:,ones(1,K));
+unew        = zeros(m,K,N);
+cnew        = zeros(1,K,N+1);
+forcenew    = zeros(nf,K,N);
 
-    n        = size(x0,1);
-    K        = length(Alpha);
-    K1       = ones(1,K); % useful for expansion
-    m        = size(u,1);
-    N        = size(u,2);
-
-    xnew        = zeros(n,K,N);
-    xnew(:,:,1) = x0(:,ones(1,K));
-    unew        = zeros(m,K,N);
-    cnew        = zeros(1,K,N+1);
-    for i = 1:N
-        unew(:,:,i) = u(:,i*K1);
-
-        if ~isempty(du)
-            unew(:,:,i) = unew(:,:,i) + du(:,i)*Alpha;
-        end    
-
-        if ~isempty(L)
-            if ~isempty(diff)
-                dx = diff(xnew(:,:,i), x(:,i*K1));
-            else
-                dx          = xnew(:,:,i) - x(:,i*K1);
-            end
-            unew(:,:,i) = unew(:,:,i) + L(:,:,i)*dx;
+for i = 1:N
+    unew(:,:,i) = u(:,i*K1);
+    
+    if ~isempty(du)
+        unew(:,:,i) = unew(:,:,i) + du(:,i)*Alpha;
+    end    
+    
+    if ~isempty(L)
+        if ~isempty(diff)
+            dx = diff(xnew(:,:,i), x(:,i*K1));
+        else
+            dx          = xnew(:,:,i) - x(:,i*K1);
         end
-
-        if ~isempty(lims)
-            unew(:,:,i) = min(lims(:,2*K1), max(lims(:,1*K1), unew(:,:,i)));
-        end
-
-        [xnew(:,:,i+1), ~]  = DYNCST(xnew(:,:,i), unew(:,:,i), i*K1);
-        cnew(:,:,i)         = DYNCST_primal(xnew(:,:,i), unew(:,:,i), rhao, x_bar(:,i*K1), c_bar(:,i*K1), u_bar(:,i*K1), i*K1);
+        unew(:,:,i) = unew(:,:,i) + L(:,:,i)*dx;
     end
-    cnew(:,:,N+1) = DYNCST_primal(xnew(:,:,N+1),nan(m,K,1), rhao, x_bar(:,(N+1)*K1), c_bar(:,(N+1)*K1), nan(m,K,1), i);
-    % put the time dimension in the columns
-    xnew = permute(xnew, [1 3 2]);
-    unew = permute(unew, [1 3 2]);
-    cnew = permute(cnew, [1 3 2]);
+    
+    if ~isempty(lims)
+        unew(:,:,i) = min(lims(:,2*K1), max(lims(:,1*K1), unew(:,:,i)));
+    end
 
+    [xnew(:,:,i+1), forcenew(:,:,i), cnew(:,:,i)]  = DYNCST(xnew(:,:,i),...
+        unew(:,:,i), rhao, x_bar(:,i*K1), c_bar(:,i*K1), u_bar(:,i*K1), thetalist_bar(:,i*K1), thetalistd_bar(:,i*K1), i*K1);
+end
+[~,~,cnew(:,:,N+1)] = DYNCST(xnew(:,:,N+1),nan(m,K,1), rhao, x_bar(:,(N+1)*K1), ...
+    c_bar(:,(N+1)*K1), nan(m,K,1), thetalist_bar(:,(N+1)*K1), thetalistd_bar(:,(N+1)*K1), i);
+% put the time dimension in the columns
+xnew = permute(xnew, [1 3 2]);
+unew = permute(unew, [1 3 2]);
+forcenew = permute(forcenew, [1 3 2]);
+cnew = permute(cnew, [1 3 2]);
 
 function [diverge, Vx, Vxx, k, K, dV] = back_pass(cx,cu,cxx,cxu,cuu,fx,fu,fxx,fxu,fuu,lambda,regType,lims,u)
 % Perform the Ricatti-Mayne backward pass
@@ -706,3 +691,5 @@ end
 for k = 1:length(user_fields)
     params.(user_fields{k}) = options.(user_fields{k});
 end
+
+

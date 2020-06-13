@@ -5,14 +5,12 @@ clc
 close all
 addpath('./dynamics/', './dynamics/kuka')
 
-full_DDP = false;
-
 global tool
 tool = [0 0 0.136]';
 
+full_DDP = false;
 % set up the optimization problem
-DYNCST                  = @(x,u,i) robot_dyn_cst(x,u,i,full_DDP);
-DYNCST_primal           = @(x,u,rhao,x_bar,c_bar,u_bar,i) admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar);
+DYNCST          = @(x,u,rhao,x_bar,c_bar,u_bar,thetalist_bar,thetalistd_bar,i) robot_dyn_cst(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar, full_DDP);
 
 T       = 1000;              % horizon 
 % x0      = [0 0.2 -0.1 0 0 0 0 0 0 0 0 0 0 0 0.1]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
@@ -66,7 +64,7 @@ params = load('inertial_params_KUKA.mat');
 inertial_params = params.inertial_params;
 
 T0          = [[eye(3);0 0 0],[xd_x(1) xd_y(1) xd_z(1)-1*tool(3) 1]'];
-theta0      = 0 + rand(7,1)*0.1;
+theta0      = 0 + ones(7,1)*0.1;
 theta0(2)   = 0.2;
 theta0(4)   = 0.2;
 [Slist, M_] = manipulator_POE();
@@ -97,10 +95,10 @@ xd       = [q_des; zeros(7,numel(t)); xd_f];
 % q_bar  = zeros(7, size(x_des,2));
 % qd_bar = zeros(7, size(x_des,2));
 % 
-% [thetalist, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], q_bar, qd_bar, 1);
+% [x0, ~, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], q_bar, qd_bar, 0);
 
 %% === run the optimization! ===
-[x,u]= ADMM_DDP_3BLKS(DYNCST, DYNCST_primal, x0, u0, Op);
+[x,u]= ADMM_DDP_3BLKS(DYNCST, x0, u0, Op);
 
 % animate the resulting trajectory
 
@@ -128,63 +126,65 @@ function y = robot_dynamics(x, u, i)
 
 
 
-function c = robot_cost(x, u, i)
+% function c = robot_cost(x, u, i)
+%     global xd
+%     % cost function for robot problem
+%     % sum of 3 terms:
+%     % lu: quadratic cost on controls
+%     % lf: final cost on distance from target parking configuration
+%     % lx: running cost on distance from origin to encourage tight turns
+% 
+%     final = isnan(u(1,:));
+%     u(:,final)  = 0;
+% 
+%     cu  = 5e-3 * [ones(1,7)];                        % control cost coefficients
+% 
+% 
+%     cf  = 0*5e-1 * [0.0*ones(1,7) 0.0*ones(1,7) 1 1 10];         % final cost coefficients
+%     pf  = 0*4e-1 * [0.0*ones(1,7) 0.0*ones(1,7) .01 .01 .1]';    % smoothness scales for final cost
+% 
+%     cx  = 5e-1 * [0.0*ones(1,7) 0.1*ones(1,7)  0 0 10];        % running cost coefficients
+%     px  = 4e-1 * [0.0*ones(1,7) 0.01.*ones(1,7) .0 .00 .1]';           % smoothness scales for running cost
+% 
+%     cx_b = 1e2 * [10 10 0];
+%     px_b = 1e2 * [10 10 0]';
+%     
+%     % control cost
+%     lu  = cu * u.^2;
+% 
+%     x_d = repmat(xd(:,i), 1,size(x,2)/numel(i));
+%     
+%     % final cost
+%     if any(final)
+%        % fk       = fkine(rb, x(1:2,final));
+%        % llf      = cf * sabs(fk(:,end),pf);
+%        llf      = cf * sabs(x(:,final)-x_d(:,final),pf);
+%        lf       = double(final);
+%        lf(final)= llf;
+%     else
+%        lf    = 0;
+%     end
+% 
+%     lx    = cx * sabs(x(:,:) - x_d, px);
+%     
+%     % total cost
+%     c     = lu + lx + lf;
+
+
+function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar)
+    % cost function for robot problem
+    % sum of 3 terms:
+    % lu: quadratic cost on controls
+    % lf: final cost on distance from target parking configuration
+    % lx: running cost on distance from origin to encourage tight turns
     global xd
-    % cost function for robot problem
-    % sum of 3 terms:
-    % lu: quadratic cost on controls
-    % lf: final cost on distance from target parking configuration
-    % lx: running cost on distance from origin to encourage tight turns
-
-    final = isnan(u(1,:));
-    u(:,final)  = 0;
-
-    cu  = 5e-3 * [ones(1,7)];                        % control cost coefficients
-
-
-    cf  = 0*5e-1 * [0.0*ones(1,7) 0.0*ones(1,7) 1 1 10];         % final cost coefficients
-    pf  = 0*4e-1 * [0.0*ones(1,7) 0.0*ones(1,7) .01 .01 .1]';    % smoothness scales for final cost
-
-    cx  = 5e-1 * [0.0*ones(1,7) 0.1*ones(1,7)  0 0 10];        % running cost coefficients
-    px  = 4e-1 * [0.0*ones(1,7) 0.01.*ones(1,7) .0 .00 .1]';           % smoothness scales for running cost
-
-    cx_b = 1e2 * [10 10 0];
-    px_b = 1e2 * [10 10 0]';
-    
-    % control cost
-    lu  = cu * u.^2;
-
-    x_d = repmat(xd(:,i), 1,size(x,2)/numel(i));
-    
-    % final cost
-    if any(final)
-       % fk       = fkine(rb, x(1:2,final));
-       % llf      = cf * sabs(fk(:,end),pf);
-       llf      = cf * sabs(x(:,final)-x_d(:,final),pf);
-       lf       = double(final);
-       lf(final)= llf;
-    else
-       lf    = 0;
-    end
-
-    lx    = cx * sabs(x(:,:) - x_d, px);
-    
-    % total cost
-    c     = lu + lx + lf;
-
-
-function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar)
-    % cost function for robot problem
-    % sum of 3 terms:
-    % lu: quadratic cost on controls
-    % lf: final cost on distance from target parking configuration
-    % lx: running cost on distance from origin to encourage tight turns
     m = size(u,1);
     n = size(x,1);
 
     final = isnan(u(1,:));
     u(:,final)  = 0;
     u_bar(:,final) = 0;
+    cen   = 0.3 * sum(x(15:17,:).^2,1) ./ RC';
     
     cu  = 5e-3*[1 1 1 1 1 1 ones(1,7)];         % control cost coefficients
 
@@ -197,6 +197,8 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar)
     % control cost
     lu    = cu * u.^2 + (rhao(2)/2) * ones(1,m) * (u-u_bar).^2;
 
+    x_d = repmat(xd(:,i), 1, size(x,2)/numel(i));
+    
     % final cost
     if any(final)
        llf      = cf*sabs(x(:,final),pf);
@@ -207,7 +209,9 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar)
     end
 
     % running cost
-    lx     = cx * sabs(x(:,:)-x_d, px) + (rhao(1)/2) * ones(1,n)*(x-x_bar).^2; % sum(x.*((roll/2)*eye(n)*x),1) - roll*sum(x_bar.*x,1) + (roll/2)*sum(x_bar.*x_bar,1);%(roll/2)*norm(x - x_bar)^2;
+    lx     = cx * sabs(x(:,:)-x_d, px) + (rhao(1)/2) * ones(1,n)*(x-x_bar).^2 + ...
+        (rhao(3)/2)*(cen-c_bar).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,:)-thetalist_bar).^2 + ...
+        (rhao(4)/2) * ones(1,7)*(x(8:14,:)-thetalistd_bar).^2; 
     
     
     % total cost
@@ -226,16 +230,16 @@ y = pp( sqrt(pp(x.^2,p.^2)), -p);
 
 
 
-function [f, c, fx, fu, fxx, fxu, fuu, cx, cu, cxx, cxu, cuu] = robot_dyn_cst(x, u, i, full_DDP)
+function [f, c, fx, fu, fxx, fxu, fuu, cx, cu, cxx, cxu, cuu] = robot_dyn_cst(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar, full_DDP)
 % combine car dynamics and cost
 % use helper function finite_difference() to compute derivatives
 if nargout == 2
     f = robot_dynamics(x,u,i);
-    c = robot_cost(x,u,i);
+    c = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar);
 else
     % state and control indices
-    ix = 1:29;
-    iu = 30:42;
+    ix = 1:17;
+    iu = 18:24;
     % dynamics first derivatives
     xu_dyn  = @(xu) robot_dynamics(xu(ix,:),xu(iu,:),i);
     J       = finite_difference(xu_dyn, [x; u]);
@@ -261,14 +265,14 @@ else
     end    
     
     % cost first derivatives
-    xu_cost = @(xu) robot_cost(xu(ix,:),xu(iu,:),i);
-    J       = squeeze(finite_difference(xu_cost, [x; u]));
+    xu_cost = @(xu,x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar) admm_robot_cost(xu(ix,:),xu(iu,:),i,rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar);
+    J       = squeeze(finite_difference2(xu_cost, [x; u],x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar));
     cx      = J(ix,:);
     cu      = J(iu,:);
     
     % cost second derivatives
-    xu_Jcst = @(xu) squeeze(finite_difference(xu_cost, xu));
-    JJ      = finite_difference(xu_Jcst, [x; u]);
+    xu_Jcst = @(xu,x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar) squeeze(finite_difference2(xu_cost, xu,x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar));
+    JJ      = finite_difference2(xu_Jcst, [x; u],x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar);
     JJ      = 0.5*(JJ + permute(JJ,[2 1 3])); %symmetrize
     cxx     = JJ(ix,ix,:);
     cxu     = JJ(ix,iu,:);
@@ -297,8 +301,30 @@ Y       = reshape(Y, m, K, n+1);
 J       = pp(Y(:,:,2:end), -Y(:,:,1)) / h;
 J       = permute(J, [1 3 2]);
 
-
-
+function J = finite_difference2(fun, x, bar1,bar2,bar3,bar4,bar5,h)
+%% simple finite-difference derivatives
+% assumes the function fun() is vectorized
+if nargin < 7
+    h = 2^-17;
+end
+[n, K]  = size(x);
+H       = [zeros(n,1) h*eye(n)];
+H       = permute(H, [1 3 2]);
+X       = pp(x, H);
+X       = reshape(X, n, K*(n+1));
+X1 = repmat(x1,1,(n+1));
+B1 = repmat(bar1,1,(n+1));
+B2 = repmat(bar2,1,(n+1));
+B3 = repmat(bar3,1,(n+1));
+B4 = repmat(bar4,1,(n+1));
+B5 = repmat(bar5,1,(n+1));
+% X1       = reshape(X1, n1, K1*(n1+1));
+% X2       = reshape(X2, n1, K1*(n1+1));
+Y       = fun(X,B1,B2,B3,B4,B5,X1);
+m       = numel(Y)/(K*(n+1));
+Y       = reshape(Y, m, K, n+1);
+J       = pp(Y(:,:,2:end), -Y(:,:,1)) / h;
+J       = permute(J, [1 3 2]);
 
 % utility functions: singleton-expanded addition and multiplication
 function c = pp(a,b)

@@ -1,4 +1,4 @@
-function [thetalist, fk_current] = kuka_second_order_IK(x_des, q0, qd0, rho, q_bar, qd_bar, is_plot)
+function [thetalist, thetalistd, fk_current] = kuka_second_order_IK(x_des, q0, qd0, rho, q_bar, qd_bar, is_plot)
 
     % close all;
     

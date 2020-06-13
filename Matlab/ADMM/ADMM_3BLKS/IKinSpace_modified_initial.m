@@ -1,5 +1,5 @@
 function [thetalist, success] ...
-         = IKinSpace_modified(Slist, M, T, thetalist0, eomg, ev)
+         = IKinSpace_modified_initial(Slist, M, T, thetalist0, eomg, ev)
 % *** CHAPTER 6: INVERSE KINEMATICS ***
 % Takes Slist: The joint screw axes in the space frame when the manipulator
 %              is at the home position, in the format of a matrix with the
