@@ -12,13 +12,13 @@ full_DDP = false;
 % set up the optimization problem
 DYNCST          = @(x,u,rhao,x_bar,c_bar,u_bar,thetalist_bar,thetalistd_bar,i) robot_dyn_cst(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar, full_DDP);
 
-T       = 1000;              % horizon 
+T       = 400;              % horizon 
 % x0      = [0 0.2 -0.1 0 0 0 0 0 0 0 0 0 0 0 0.1]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
 % u0      = -0.1 + zeros(6,T);     % initial controls
 
 Op.lims  = [-pi pi;             % wheel angle limits (radians)
              -3  3];            % acceleration limits (m/s^2)
-Op.plot  = 1;                    % plot the derivatives as well
+Op.plot  = 0;                    % plot the derivatives as well
 Op.maxIter = 10;
 
 global x_des
@@ -184,9 +184,11 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     final = isnan(u(1,:));
     u(:,final)  = 0;
     u_bar(:,final) = 0;
-    cen   = 0.3 * sum(x(15:17,:).^2,1) ./ RC(i)';
     
-    cu  = 5e-3*[ones(1,7)];         % control cost coefficients
+    RC_expand = repmat(RC(i)', 1, size(x,2)/numel(i));
+    cen   = 0.3 * sum(x(15:17,:).^2,1) ./ RC_expand;
+    
+    cu  = 5e-3*ones(1,7);         % control cost coefficients
 
     cf  = 0*5e-1 * [0.0*ones(1,7) 0.0*ones(1,7) 1 1 10];         % final cost coefficients
     pf  = 0*4e-1 * [0.0*ones(1,7) 0.0*ones(1,7) .01 .01 .1]';    % smoothness scales for final cost
@@ -306,7 +308,7 @@ J       = permute(J, [1 3 2]);
 function J = finite_difference2(fun, x, bar1,bar2,bar3,bar4,bar5,h)
 %% simple finite-difference derivatives
 % assumes the function fun() is vectorized
-if nargin < 7
+if nargin < 8
     h = 2^-17;
 end
 [n, K]  = size(x);
@@ -314,7 +316,6 @@ H       = [zeros(n,1) h*eye(n)];
 H       = permute(H, [1 3 2]);
 X       = pp(x, H);
 X       = reshape(X, n, K*(n+1));
-X1 = repmat(x1,1,(n+1));
 B1 = repmat(bar1,1,(n+1));
 B2 = repmat(bar2,1,(n+1));
 B3 = repmat(bar3,1,(n+1));
@@ -322,7 +323,7 @@ B4 = repmat(bar4,1,(n+1));
 B5 = repmat(bar5,1,(n+1));
 % X1       = reshape(X1, n1, K1*(n1+1));
 % X2       = reshape(X2, n1, K1*(n1+1));
-Y       = fun(X,B1,B2,B3,B4,B5,X1);
+Y       = fun(X,B1,B2,B3,B4,B5);
 m       = numel(Y)/(K*(n+1));
 Y       = reshape(Y, m, K, n+1);
 J       = pp(Y(:,:,2:end), -Y(:,:,1)) / h;

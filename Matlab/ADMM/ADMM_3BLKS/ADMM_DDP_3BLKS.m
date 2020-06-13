@@ -38,7 +38,7 @@ last_head   = print_head;
 verbosity   = 1;
 
 if verbosity > 0
-    fprintf('\n =========== begin ADMM =========== \n');
+    fprintf('\n =========== begin ADMM Three Block =========== \n');
 end
 
 %%%%%%% Initialize dual variebles
@@ -48,7 +48,7 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [2,1.15,1,0,0];
+rhao   = [2,1.15,0,0,0];
 
 
 alpha  = 1.5;
@@ -104,12 +104,14 @@ for i = 1:admmMaxIter
         %====== iLQR block incorporating the soft contact model
         % robot manipulator
         % consensus: 
+        fprintf('\n=========== begin iLQR %d ===========\n',i);
         [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, rhao, x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
         qnew            = xnew(1:7,:);
         qdnew           = xnew(8:14,:);
         cnew            = 0.3 * sum(xnew(15:17,:).^2,1) ./ RC';
         
         %====== ik block
+        fprintf('\n=========== begin IK %d ===========\n',i);
         thetalist_old = thetalist;
         thetalistd_old = thetalistd;
         
@@ -247,7 +249,7 @@ for i = 1:admmMaxIter
     res_qlambda(:,i) = rhao(5) * norm(thetalist - thetalist_old);
     res_qdlambda(:,i) = rhao(4) * norm(thetalistd - thetalistd_old);
     
-    [~,~,cost22]  = traj_sim(x0, unew, DYNCST);
+    [~,~,cost22]  = traj_sim(x0, unew, DYNCST, zeros(1,5),x_init,c_init,u_init,zeros(7,N+1),zeros(7,N+1));
     costcomp(:,i) = sum(cost22(:));
     
     % ====== varying penalty parameter ======== %
@@ -272,12 +274,17 @@ plot(ppp,alphak_v);
 figure(10)
 subplot(1,2,1)
 l = 1:admmMaxIter;
-plot(l,res_u);
+plot(l,res_u,'DisplayName','residue u');
 hold on;
-plot(l,res_x);
-plot(l,res_ulambda);
-plot(l,res_xlambda);
-plot(l,res_clambda);
+plot(l,res_x,'DisplayName','residue x');
+plot(l,res_c,'DisplayName','residue c');
+plot(l,res_q,'DisplayName','residue q');
+plot(l,res_qd,'DisplayName','residue qd');
+plot(l,res_ulambda,'DisplayName','residue ulambda');
+plot(l,res_xlambda,'DisplayName','residue xlambda');
+plot(l,res_clambda,'DisplayName','residue clambda');
+plot(l,res_qlambda,'DisplayName','residue qlambda');
+plot(l,res_qdlambda,'DisplayName','residue qdlambda');
 title('residue of primal and dual variebles for accelerated ADMM')
 xlabel('ADMM iteration')
 ylabel('residue')
@@ -304,7 +311,7 @@ hold on
 plot(ii,e2);
 hold off
 
-[~,~,costnew]  = traj_sim(x0,unew,DYNCST);
+[~,~,costnew]  = traj_sim(x0,unew,DYNCST,zeros(1,5),x_init,c_init,u_init,zeros(7,N+1),zeros(7,N+1));
 
 %% ====== STEP 5: accept step (or not), expand or shrink trust region
 % print headings
