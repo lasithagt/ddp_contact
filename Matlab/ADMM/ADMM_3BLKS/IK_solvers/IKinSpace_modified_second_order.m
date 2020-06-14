@@ -73,7 +73,7 @@ while err && i < maxiterations
                 - JacSpaceDot(Slist, thetalist, thetalist_d) * thetalist_d) ...
                 + 0.01 * (rho(1)) * (thetalist_d - qd_bar); 
   
-    thetalist_  = thetalist + thetalist_d + 0.01*(rho(2) / 2) * (thetalist - q_bar);
+    thetalist_  = thetalist + thetalist_d + 0.01*(rho(2)) * (thetalist - q_bar);
     
     Tsb = FKinSpace(M, Slist, thetalist_);
     Vs  = Adjoint(Tsb) * se3ToVec(MatrixLog6(TransInv(Tsb) * T));
