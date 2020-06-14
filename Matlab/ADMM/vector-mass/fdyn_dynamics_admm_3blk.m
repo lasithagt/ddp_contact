@@ -75,9 +75,9 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
         end
         
         m = 1;
-        F_normal_dot = 2 * m * x(21:23,i) .* xdd_e(1:3); % / RC(i);
+        F_normal_dot = 2 * m * x_dot(1:3) .* xdd_e(1:3); % / RC(i);
 
-        F        = F_f - k*x(23,i)*[0;0;1] - xdd_e(3)*[0;0;1] + F_normal_dot.*K_DIR;
+        F        = F_f - k * x_dot(3) * [0;0;1] - xdd_e(3) * [0;0;1] + F_normal_dot.*K_DIR;
         ret(:,i) = [qdd; 0*F];
         
     end

@@ -19,7 +19,7 @@ T       = 1000;              % horizon
 % u0      = -0.1 + zeros(6,T);     % initial controls
 
 Op.lims  = [-pi pi;             % wheel angle limits (radians)
-             -3  3];            % acceleration limits (m/s^2)
+             -20  20];            % acceleration limits (m/s^2)
 Op.plot  = 1;                    % plot the derivatives as well
 Op.maxIter = 10;
 
@@ -55,7 +55,7 @@ lbr.DataFormat = 'column'; % data format for joint positions, joint velocities a
 lbr.Gravity = g; % gravity vector has to be flipped if using a flipped urdf as acceleration is defined w.r.t base frame not world frame
 inertial_params = KUKA_Inertial_Params(lbr);
 
-T0          = [[eye(3);0 0 0],[xd_x(1) xd_y(1) xd_z(1)-1*tool(3) 1]'];
+T0          = [[eye(3);0 0 0],[xd_x(1) xd_y(1) xd_z(1) 1]'];
 theta0      = 0 + rand(7,1)*0.1;
 theta0(2)   = 0.2;
 theta0(4)   = 0.2;

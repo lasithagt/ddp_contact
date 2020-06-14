@@ -53,32 +53,32 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
             Ff+Fv+grav_comp + u(1:7,i) - J(1:3,:)' * f_ee);
         
         % acceleration in the cartesian space
-%         xdd_e    = J * qdd + J_dot(x) * x(8:14,i);
-%         
-%         mu       = 0.4340;
-%         nu       = 0.55;
-%         k        = (6 * E^2 * R * abs(f_ee(3))) ^ (1/3);
-%         
-%         if (k < 10)
-%             k = (6 * E^2 * R * abs(0.01))^(1/3);
-%         end
+        xdd_e    = J * qdd + J_dot(x) * x(8:14,i);
+        
+        mu       = 0.4340;
+        nu       = 0.55;
+        k        = (6 * E^2 * R * abs(f_ee(3))) ^ (1/3);
+        
+        if (k < 10)
+            k = (6 * E^2 * R * abs(0.01))^(1/3);
+        end
         
         % frictional force
-%         F_f_dot  = mu * k * x_dot(3)*vel_dir + 3 * mu * (2*nu-1) *(k * x_dot(3) * d ...
-%             + f_ee(3) * x_dot(3)) * vel_dir / (10 * R) + 14.02 * xdd_e(1:3);
-%         
-% 
-%         if (norm(K_D(:,i)) == 0)
-%             K_DIR    = K_D(:,i);
-%         else
-%             K_DIR    = K_D(:,i) ./ norm(K_D(:,i));
-%         end
-%         
-%         m = 1;
-%         F_normal_dot = 2 * m * x_dot(1:3) .* xdd_e(1:3); % / RC(i);
-% 
-%         F_dot        = F_f_dot - k  * x_dot(3) * [0;0;1] - xdd_e(3) * [0;0;1] + F_normal_dot .* K_DIR;
-%         ret(:,i) = [qdd; 0*F_dot];
+        F_f_dot  = mu * k * x_dot(3)*vel_dir + 3 * mu * (2*nu-1) *(k * x_dot(3) * d ...
+            + f_ee(3) * x_dot(3)) * vel_dir / (10 * R) + 14.02 * xdd_e(1:3);
+        
+
+        if (norm(K_D(:,i)) == 0)
+            K_DIR    = K_D(:,i);
+        else
+            K_DIR    = K_D(:,i) ./ norm(K_D(:,i));
+        end
+        
+        m = 1;
+        F_normal_dot = 2 * m * x_dot(1:3) .* xdd_e(1:3); % / RC(i);
+
+        F_dot        = F_f_dot - k  * x_dot(3) * [0;0;1] - xdd_e(3) * [0;0;1] + F_normal_dot .* K_DIR;
+        ret(:,i) = [qdd; 0*F_dot];
         ret(:,i) = [qdd; zeros(3,1)];
         
     end
