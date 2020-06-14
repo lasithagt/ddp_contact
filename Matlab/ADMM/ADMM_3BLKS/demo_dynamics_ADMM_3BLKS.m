@@ -12,13 +12,13 @@ full_DDP = false;
 % set up the optimization problem
 DYNCST          = @(x,u,rhao,x_bar,c_bar,u_bar,thetalist_bar,thetalistd_bar,i) robot_dyn_cst(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar, full_DDP);
 
-T       = 400;              % horizon 
+T       = 100;              % horizon 
 % x0      = [0 0.2 -0.1 0 0 0 0 0 0 0 0 0 0 0 0.1]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
 % u0      = -0.1 + zeros(6,T);     % initial controls
 
 Op.lims  = [-pi pi;             % wheel angle limits (radians)
-             -3  3];            % acceleration limits (m/s^2)
-Op.plot  = 0;                    % plot the derivatives as well
+             -50  50];            % acceleration limits (m/s^2)
+Op.plot  = 1;                    % plot the derivatives as well
 Op.maxIter = 10;
 
 global x_des
@@ -63,20 +63,20 @@ g   = [0 0 9.81];
 params = load('inertial_params_KUKA.mat');
 inertial_params = params.inertial_params;
 
-T0          = [[eye(3);0 0 0],[xd_x(1) xd_y(1) xd_z(1)-1*tool(3) 1]'];
+T0          = [[eye(3);0 0 0],[xd_x(1) xd_y(1) xd_z(1) 1]'];
 theta0      = 0 + ones(7,1)*0.1;
 theta0(2)   = 0.2;
 theta0(4)   = 0.2;
 [Slist, M_] = manipulator_POE();
-[q0,s]      = IKinSpace_modified_initial(Slist, M_, T0, theta0, 0.001, 0.001);
+[q0,s]      = IKinSpace_modified_initial(Slist, M_, T0, theta0, 0.00001, 0.00001);
 
-if any(q0 > pi)
-    for i = 1:7
-        if (q0(i) > pi)
-            q0(i) = -2*pi + q0(i);
-        end
-    end
-end
+% if any(q0 > pi)
+%     for i = 1:7
+%         if (q0(i) > pi)
+%             q0(i) = -2*pi + q0(i);
+%         end
+%     end
+% end
 
 if (s == 1)
     fprintf("Inverse Solution Found...")
@@ -91,11 +91,14 @@ u0 (3,1) = 0;
 q_des    = repmat(q0, 1, numel(t));
 xd       = [q_des; zeros(7,numel(t)); zeros(2,numel(t)) ;xd_f];
 
+
 %% For testing IK
 % q_bar  = zeros(7, size(x_des,2));
 % qd_bar = zeros(7, size(x_des,2));
 % 
-% [x0, ~, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], q_bar, qd_bar, 0);
+% [theta0, ~, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], q_bar, qd_bar, 0);
+% 
+% u0       = -G_kuka(inertial_params, theta0)'; 
 
 %% === run the optimization! ===
 [x,u]= ADMM_DDP_3BLKS(DYNCST, x0, u0, Op);
@@ -188,13 +191,13 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     RC_expand = repmat(RC(i)', 1, size(x,2)/numel(i));
     cen   = 0.3 * sum(x(15:17,:).^2,1) ./ RC_expand;
     
-    cu  = 5e-3*ones(1,7);         % control cost coefficients
+    cu  = 5e-8*ones(1,7);         % control cost coefficients
 
     cf  = 0*5e-1 * [0.0*ones(1,7) 0.0*ones(1,7) 1 1 10];         % final cost coefficients
     pf  = 0*4e-1 * [0.0*ones(1,7) 0.0*ones(1,7) .01 .01 .1]';    % smoothness scales for final cost
 
-    cx  = 5e-1 * [0.0*ones(1,7) 0.1*ones(1,7) 0 0 10];           % running cost coefficients
-    px  = 4e-1 * [0.0*ones(1,7) 0.01.*ones(1,7) .0 .00 .1]';     % smoothness scales for running cost
+    cx  = 5e-1 * [0.0*ones(1,7) 0.00001*ones(1,7) 0 0 0];           % running cost coefficients
+    px  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .1]';     % smoothness scales for running cost
 
     % control cost
 
@@ -282,7 +285,18 @@ else
     cxu     = JJ(ix,iu,:);
     cuu     = JJ(iu,iu,:);
     
+%     cx      = diag(rhao(5)/2 * ones(1,7)) * (x(1:7,:)-thetalist_bar);
+%     cu      = 
+%     cuu     =
+%     cxx     =
+%     cxu     =
+%         
+%         lx     = cx * sabs(x(:,:)-x_d, px) + (rhao(1)/2) * ones(1,n)*(x-x_bar).^2 + ...
+%         (rhao(3)/2)*(cen-c_bar).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,:)-thetalist_bar).^2 + ...
+%         (rhao(4)/2) * ones(1,7)*(x(8:14,:)-thetalistd_bar).^2; 
+%     
     [f,c] = deal([]);
+    
 end
 
 

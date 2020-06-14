@@ -1,6 +1,6 @@
 function [x, u, cost] = ADMM_DDP_3BLKS(DYNCST, x0, u0, Op)
 %---------------------- user-adjustable parameters ------------------------
-global RC K x_des
+global RC K x_des inertial_params
 % --- initial sizes and controls
 n   = size(x0,1);          % dimension of state vector
 m   = size(u0, 1);          % dimension of control vector
@@ -48,7 +48,7 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [2,1.15,0,0,0];
+rhao   = [0,0,0,0.,0.1];
 
 
 alpha  = 1.5;
@@ -63,9 +63,10 @@ unew = u;
 cnew = c;
 % ik primal
 % warm start by ik
-[x_ik_ws, xd_ik_ws, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], zeros(7, size(x_des,2)), zeros(7, size(x_des,2)), 0);
+[x_ik_ws, xd_ik_ws, fk]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], zeros(7, size(x_des,2)), zeros(7, size(x_des,2)), 1);
 thetalist = x_ik_ws; 
 thetalistd = xd_ik_ws;
+x0(8:14) = thetalistd(:,1);
 % projection
 u_bar = zeros(size(u));
 x_bar = zeros(size(x));
@@ -95,6 +96,14 @@ res_qdlambda = zeros(1,admmMaxIter);
 costcomp = zeros(1, admmMaxIter);
 
 plot_IK = 0;
+
+% q_bar  = zeros(7, size(x_des,2));
+% qd_bar = zeros(7, size(x_des,2));
+% 
+% [theta0, ~, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], q_bar, qd_bar, 0);
+% for i = 1:N
+%     unew(:,i)   = -G_kuka(inertial_params, theta0(:,i))'; 
+% end
     
 %% ADMM iteration
 for i = 1:admmMaxIter
@@ -115,7 +124,7 @@ for i = 1:admmMaxIter
         thetalist_old = thetalist;
         thetalistd_old = thetalistd;
         
-        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), rhao(4:5), qnew+q_lambda, qdnew+qd_lambda, plot_IK);
+        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), rhao(4:5), qnew+q_lambda, qdnew+qd_lambda, 1);
         
         %====== project operator to satisfy the constraint
         x_bar_old = x_bar;

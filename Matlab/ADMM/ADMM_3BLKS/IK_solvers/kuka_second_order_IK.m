@@ -5,10 +5,9 @@ function [thetalist, thetalistd, fk_current] = kuka_second_order_IK(x_des, q0, q
     [Slist_K, g_st] = manipulator_POE; % KUKA
     
     S        = Slist_K;
-    eomg     = 0.01;
-    ev       = 0.001;
+    eomg     = 0.001;
+    ev       = 0.0001;
     
-    rng default
     thetalist0  = q0;
     thetalistd0 = qd0;
     
@@ -31,18 +30,31 @@ function [thetalist, thetalistd, fk_current] = kuka_second_order_IK(x_des, q0, q
     j = 0;
     c = cost_trajectory(fk_desired, fk_current);
     
+    thetalist(:,1)  = thetalist0;
+    thetalistd(:,1) = thetalistd0;
+    fk_                 = FKinSpace(g_st, S, thetalist(:,1));
+    fk_current(1:3, 1)  = fk_(1:3, 4);
+    fk_current(4:6, 1)  = rotm2eul(fk_(1:3, 1:3)');
+    
     while ~terminate(c, j)
-
-        for i = 1:n
+        for i = 2:n
             
-            R     = eul2rotm([x_des(1,i), x_des(2,i), x_des(3,i)]);
+            R     = eul2rotm([x_des(4,i), x_des(5,i), x_des(6,i)]);
             T_des = RpToTrans(R, x_des(1:3,i));
+            
+            if (i == 2)
+                thetalist0     = thetalist(:,1);
+                thetalistd0     = thetalistd(:,1);
+            end
+            
             [thetalist(:,i), thetalistd(:,i), success] = IKinSpace_modified_second_order(S, g_st, T_des, thetalist0, thetalistd0, eomg, ev, rho, q_bar(:,i), qd_bar(:,i));
             
             % success
             % thetalist                 = mod(thetalist, 2 * pi);
-            
+
             thetalist0                = thetalist(:,i);
+            thetalistd0                = thetalistd(:,i);
+            
             fk_                       = FKinSpace(g_st, S, thetalist(:,i));
             fk_current(1:3, i)        = fk_(1:3, 4);
             fk_current(4:6, i)        = rotm2eul(fk_(1:3, 1:3)');
@@ -52,27 +64,28 @@ function [thetalist, thetalistd, fk_current] = kuka_second_order_IK(x_des, q0, q
         j = j + 1;
         c = cost_trajectory(fk_desired, fk_current);
         if (is_plot)
+            figure(1)
             plot3(fk_current(1,:), fk_current(2,:), fk_current(3,:)); 
         end
         grid on
         
     end
     
-    if (is_plot)
-        figure(2)
-        title('Velocity')
-        for i = 1:7
-           subplot(4,2,i) 
-           plot(thetalistd(i, :))
-        end
-
-        figure(3)
-        title('Joint Position')
-        for i = 1:7
-           subplot(4,2,i) 
-           plot(thetalist(i,:))
-        end
-    end
+%     if (is_plot)
+%         figure(2)
+%         title('Velocity')
+%         for i = 1:7
+%            subplot(4,2,i) 
+%            plot(thetalistd(i, :))
+%         end
+% 
+%         figure(3)
+%         title('Joint Position')
+%         for i = 1:7
+%            subplot(4,2,i) 
+%            plot(thetalist(i,:))
+%         end
+%     end
     
     function c = cost_trajectory(x_desired, x_trajectory)
         c = sum(sum((x_desired - x_trajectory).^2, 1), 2);
