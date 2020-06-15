@@ -48,13 +48,13 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [0,0,0,0.,0.1];
+rhao   = [1e-4,1e-4,0,0,0.5];
 
 
 alpha  = 1.5;
 alphak = 1;
 yita   = 0.999;
-admmMaxIter  = 5;
+admmMaxIter  = 20;
 
 %%%%%%% Primal variables
 % ddp primal

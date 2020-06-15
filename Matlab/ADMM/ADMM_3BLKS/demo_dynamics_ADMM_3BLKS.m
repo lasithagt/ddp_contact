@@ -17,9 +17,9 @@ T       = 100;              % horizon
 % u0      = -0.1 + zeros(6,T);     % initial controls
 
 Op.lims  = [-pi pi;             % wheel angle limits (radians)
-             -50  50];            % acceleration limits (m/s^2)
+             -10  10];            % acceleration limits (m/s^2)
 Op.plot  = 1;                    % plot the derivatives as well
-Op.maxIter = 10;
+Op.maxIter = 15;
 
 global x_des
 %% desired path to track
