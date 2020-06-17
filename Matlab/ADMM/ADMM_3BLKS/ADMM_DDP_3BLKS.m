@@ -48,7 +48,7 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [1e-4,1e-4,0,0,0.5];
+rhao   = [1e-5,1e-5,0,0,0.3];
 
 
 alpha  = 1.5;
