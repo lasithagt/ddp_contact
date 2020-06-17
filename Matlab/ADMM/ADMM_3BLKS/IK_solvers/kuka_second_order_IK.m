@@ -66,8 +66,10 @@ function [thetalist, thetalistd, fk_current] = kuka_second_order_IK(x_des, q0, q
         if (is_plot)
             figure(1)
             plot3(fk_current(1,:), fk_current(2,:), fk_current(3,:)); 
+            axis([-0.15 0.15 -0.15 0.15 0.7 0.95])
         end
         grid on
+        
         
     end
     

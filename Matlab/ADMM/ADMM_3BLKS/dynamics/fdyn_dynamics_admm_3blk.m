@@ -22,7 +22,7 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
         
         
         % material properties of the surface
-        E  = 100000; 
+        E  = 300; 
         R  = 0.0013/2; % in mm
         m  = 0.3;
                 
@@ -50,7 +50,7 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
         
         grav_comp =   -G_kuka(inertial_params, x(1:7,i))'; 
         qdd       =   kukaAnalytical_qdd(inertial_params, x(1:7,i), x(8:14,i),...
-            Ff+Fv+grav_comp + u(1:7,i) - J(1:3,:)' * f_ee);
+            Ff+Fv+grav_comp + u(1:7,i) - 0*J(1:3,:)' * f_ee);
         
         % acceleration in the cartesian space
         xdd_e    = J * qdd + J_dot(x) * x(8:14,i);
@@ -59,13 +59,15 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
         nu       = 0.55;
         k        = (6 * E^2 * R * abs(f_ee(3))) ^ (1/3);
         
-        if (k < 10)
+        if (k < 50)
             k = (6 * E^2 * R * abs(0.01))^(1/3);
+            k = 50;
         end
+        
         
         % frictional force
         F_f_dot  = mu * k * x_dot(3)*vel_dir + 3 * mu * (2*nu-1) *(k * x_dot(3) * d ...
-            + f_ee(3) * x_dot(3)) * vel_dir / (10 * R) + 14.02 * xdd_e(1:3);
+            + f_ee(3) * x_dot(3)) * vel_dir / (10 * R) + 0 * 14.02 * xdd_e(1:3);
         
 
         if (norm(K_D(:,i)) == 0)
@@ -77,9 +79,11 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
         m = 1;
         F_normal_dot = 2 * m * x_dot(1:3) .* xdd_e(1:3); % / RC(i);
 
-        F_dot        = F_f_dot - k  * x_dot(3) * [0;0;1] - xdd_e(3) * [0;0;1] + F_normal_dot .* K_DIR;
-        ret(:,i) = [qdd; 0*F_dot];
-        ret(:,i) = [qdd; zeros(3,1)];
+        
+        F_dot        = 0*F_f_dot - k  * x_dot(3) * [0;0;1] - 2*xdd_e(3) * [0;0;1] + 0*F_normal_dot .* K_DIR;
+        F_dot        = -F_f_dot + 100 * x_dot(3) * [0;0;1] + 0.1 * xdd_e(3) * [0;0;1];
+        ret(:,i)     = [qdd; F_dot];
+%         ret(:,i) = [qdd; zeros(3,1)];
         
     end
 %     toc

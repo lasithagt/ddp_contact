@@ -17,7 +17,7 @@ T       = 100;              % horizon
 % u0      = -0.1 + zeros(6,T);     % initial controls
 
 Op.lims  = [-pi pi;             % wheel angle limits (radians)
-             -10  10];            % acceleration limits (m/s^2)
+             -30  30];            % acceleration limits (m/s^2)
 Op.plot  = 1;                    % plot the derivatives as well
 Op.maxIter = 15;
 
@@ -33,7 +33,7 @@ Rd_p = 0 * ones(1, numel(t));
 Rd_y = 0 * ones(1, numel(t));
 % [xd_x, xd_y, xd_z] = lissajous_curve(t, 1.1608);
 
-xd_f = -0.5 * sin(1*t) - 1.5;
+xd_f = -0.0 * sin(1*t) - 5.5;
 
 x_des = [xd_x; xd_y; xd_z; Rd_r; Rd_p; Rd_y];
 
@@ -193,10 +193,10 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     
     cu  = 5e-8*ones(1,7);         % control cost coefficients
 
-    cf  = 0*5e-1 * [0.0*ones(1,7) 0.0*ones(1,7) 1 1 10];         % final cost coefficients
-    pf  = 0*4e-1 * [0.0*ones(1,7) 0.0*ones(1,7) .01 .01 .1]';    % smoothness scales for final cost
+    cf  = 5e-1 * [0.0*ones(1,7) 0.00000*ones(1,7) 0.0 0.0 0.02];        % final cost coefficients
+    pf  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .1 ]';    % smoothness scales for final cost
 
-    cx  = 5e-1 * [0.0*ones(1,7) 0.00001*ones(1,7) 0 0 0];           % running cost coefficients
+    cx  = 5e-1 * [0.0*ones(1,7) 0.00000*ones(1,7) 0.0 0.0 0.02];           % running cost coefficients
     px  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .1]';     % smoothness scales for running cost
 
     % control cost
@@ -224,10 +224,6 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     % total cost
     c     = lu + lx + lf; 
 
-% get the RCC TODO
-function y = getCENT(x, R)
-m = 0.3;
-y = m * sum(x(21:23,:).^2,1) ./ R';
 
 
 % utility functions

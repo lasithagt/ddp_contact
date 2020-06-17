@@ -10,7 +10,7 @@
             Grav = -double(G_kuka(params, q_pos'));
             
             % TODO: Add friction model
-             qdd(:,i) = (M+0.000*eye(7))\(tau(:, i) - Grav' - CX2'*q_vel); %  INV_kuka(params, q_pos', q_vel', q_accel'); %
+             qdd(:,i) = (M+0.1*eye(7))\(tau(:, i) - Grav' - CX2'*q_vel); %  INV_kuka(params, q_pos', q_vel', q_accel'); %
         end
 %         toc
     end
