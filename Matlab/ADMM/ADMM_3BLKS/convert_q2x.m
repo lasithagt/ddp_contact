@@ -16,7 +16,7 @@ function p = convert_q2x(x)
     %close all
     figure(3)
     plot3(x,y,z)
-    axis([-0.08 0.08 -0.08 0.08 0.7 0.9])
+    axis([-0.15 0.15 -0.15 0.15 0.7 0.9])
     hold on
     plot3(x(1),y(1),z(1),'*')
 

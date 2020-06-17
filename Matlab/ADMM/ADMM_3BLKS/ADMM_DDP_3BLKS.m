@@ -48,7 +48,7 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [1e-5,1e-5,0,0,0.3];
+rhao   = [1e-4,1e-7,0,0,1];
 
 
 alpha  = 1.5;
@@ -65,7 +65,7 @@ cnew = c;
 % warm start by ik
 [x_ik_ws, xd_ik_ws, fk]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], zeros(7, size(x_des,2)), zeros(7, size(x_des,2)), 1);
 thetalist = x_ik_ws; 
-thetalistd = xd_ik_ws;
+thetalistd = 0*xd_ik_ws;
 x0(8:14) = thetalistd(:,1);
 % projection
 u_bar = zeros(size(u));
@@ -75,10 +75,10 @@ c_bar = zeros(size(c));
 alphak_v = ones(1,admmMaxIter+1);
 
 %%%%%%%% Dual variables
-x_lambda = xnew - x_bar;
-c_lambda = cnew - c_bar;
-u_lambda = unew - u_bar;
-q_lambda = xnew(1:7,:) - thetalist;
+x_lambda = 0*xnew - 0*x_bar;
+c_lambda = 0*cnew - 0*c_bar;
+u_lambda = 0*unew - 0*u_bar;
+q_lambda = 0*xnew(1:7,:) - 0*thetalist;
 qd_lambda = xnew(8:14,:) - thetalistd;
 % ck = (1/roll)*norm(x_lambda-x_lambda2)^2 + (1/roll)*norm(u_lambda-u_lambda2)^2 + roll*norm(x_bar-x_bar2)^2 + roll*norm(u_bar-u_bar2)^2;
     
@@ -124,7 +124,7 @@ for i = 1:admmMaxIter
         thetalist_old = thetalist;
         thetalistd_old = thetalistd;
         
-        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), rhao(4:5), qnew+q_lambda, qdnew+qd_lambda, 1);
+        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), 0*x0(8:14), rhao(4:5), qnew+q_lambda, qdnew+qd_lambda, 1);
         
         %====== project operator to satisfy the constraint
         x_bar_old = x_bar;
