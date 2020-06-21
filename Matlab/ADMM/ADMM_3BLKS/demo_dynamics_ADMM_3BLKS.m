@@ -191,13 +191,13 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     RC_expand = repmat(RC(i)', 1, size(x,2)/numel(i));
     cen   = 0.3 * sum(x(15:17,:).^2,1) ./ RC_expand;
     
-    cu  = 5e-8*ones(1,7);         % control cost coefficients
+    cu  = 5e-5*ones(1,7);         % control cost coefficients
 
-    cf  = 5e-1 * [0.0*ones(1,7) 0.00000*ones(1,7) 0.0 0.0 0.02];        % final cost coefficients
-    pf  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .1 ]';    % smoothness scales for final cost
+    cf  = 5e-1 * [0.0*ones(1,7) 0.000001*ones(1,7) 0.0 0.0 0.02];        % final cost coefficients
+    pf  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .02 ]';    % smoothness scales for final cost
 
-    cx  = 5e-1 * [0.0*ones(1,7) 0.00000*ones(1,7) 0.0 0.0 0.02];           % running cost coefficients
-    px  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .1]';     % smoothness scales for running cost
+    cx  = 5e-1 * [0.0*ones(1,7) 0.000001*ones(1,7) 0.0 0.0 0.02];           % running cost coefficients
+    px  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .02]';     % smoothness scales for running cost
 
     % control cost
 
@@ -214,9 +214,9 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
        lf    = 0;
     end
 
-    
+%     cx(15:17) * sum((x(15:17,:)-x_d(15:17,:)).^2,2);
     % running cost
-    lx     = cx * sabs(x(:,:)-x_d, px) + (rhao(1)/2) * ones(1,n)*(x-x_bar).^2 + ...
+    lx     = cx(15:17) * (x(15:17,:)-x_d(15:17,:)).^2 + (rhao(1)/2) * ones(1,n)*(x-x_bar).^2 + ...
         (rhao(3)/2)*(cen-c_bar).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,:)-thetalist_bar).^2 + ...
         (rhao(4)/2) * ones(1,7)*(x(8:14,:)-thetalistd_bar).^2; 
     

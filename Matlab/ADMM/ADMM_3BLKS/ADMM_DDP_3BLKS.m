@@ -48,7 +48,7 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [1e-4,1e-7,0,0,1];
+rhao   = [1e-4,1e-6,0,0,0.5];
 
 
 alpha  = 1.5;
@@ -375,11 +375,12 @@ function [xnew,unew,cnew] = traj_sim(x0, u0, DYNCST, rhao,x_bar,c_bar,u_bar, the
     N        = size(u0,2);
 
     xnew        = zeros(n,N);
-    xnew(:,1) = x0(:,1);
+    xnew(:,1)   = x0(:,1);
     unew        = u0;
     cnew        = zeros(1,N+1);
     for i = 1:N
         [xnew(:,i+1), cnew(:,i)]  = DYNCST(xnew(:,i), unew(:,i),rhao,x_bar(:,i),c_bar(:,i),u_bar(:,i), thetalist_bar(:,i), thetalistd_bar(:,i),i);
+        xnew(:,i+1);
     end
     
     

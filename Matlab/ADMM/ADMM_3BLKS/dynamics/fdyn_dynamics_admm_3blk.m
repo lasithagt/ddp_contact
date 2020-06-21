@@ -41,7 +41,7 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
         
         f_ee      = x(15:17,i);
                
-        kv        = diag([4.0, 1.5, 1.0, 0.8, 0.8, 0.3, 0.05]);
+        kv        = 0.1*diag([4.0, 1.5, 1.0, 0.8, 0.8, 0.3, 0.4]);
         k_static  = (0.0) * diag([0.02 0.02 0.01 0.07 0.01 0.01 0.001]);
         
         Ff        =   -k_static * sign(x(8:14,i));
@@ -81,7 +81,7 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
 
         
         F_dot        = 0*F_f_dot - k  * x_dot(3) * [0;0;1] - 2*xdd_e(3) * [0;0;1] + 0*F_normal_dot .* K_DIR;
-        F_dot        = -F_f_dot + 100 * x_dot(3) * [0;0;1] + 0.1 * xdd_e(3) * [0;0;1];
+        F_dot        = -F_f_dot + 100 * x_dot(3) * [0;0;1] + 0.0 * xdd_e(3) * [0;0;1];
         ret(:,i)     = [qdd; F_dot];
 %         ret(:,i) = [qdd; zeros(3,1)];
         
