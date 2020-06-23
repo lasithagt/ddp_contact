@@ -19,14 +19,14 @@ T       = 100;              % horizon
 Op.lims  = [-pi pi;             % wheel angle limits (radians)
              -30  30];            % acceleration limits (m/s^2)
 Op.plot  = 1;                    % plot the derivatives as well
-Op.maxIter = 15;
+Op.maxIter = 5;
 
 global x_des
 %% desired path to track
 t    = linspace(0, 2*pi, T+1);
 r    = 0.06;
 xd_x = r * cos(t);
-xd_y = r * sin(2*t);
+xd_y = r * sin(3*t);
 xd_z = (0.8) * ones(1,numel(t));
 Rd_r = 0 * ones(1, numel(t));
 Rd_p = 0 * ones(1, numel(t));
@@ -193,11 +193,11 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     
     cu  = 5e-5*ones(1,7);         % control cost coefficients
 
-    cf  = 5e-1 * [0.0*ones(1,7) 0.000001*ones(1,7) 0.0 0.0 0.02];        % final cost coefficients
-    pf  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .02 ]';    % smoothness scales for final cost
+    cf  = 5e-1 * [0.0*ones(1,7) 0.00000*ones(1,7) 0.0 0.0 0.05];        % final cost coefficients
+    pf  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .05 ]';    % smoothness scales for final cost
 
-    cx  = 5e-1 * [0.0*ones(1,7) 0.000001*ones(1,7) 0.0 0.0 0.02];           % running cost coefficients
-    px  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .02]';     % smoothness scales for running cost
+    cx  = 5e-1 * [0.0*ones(1,7) 0.00000*ones(1,7) 0.0 0.0 0.05];           % running cost coefficients
+    px  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .05]';     % smoothness scales for running cost
 
     % control cost
 
@@ -207,8 +207,8 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     
     % final cost
     if any(final)
-       llf      = cf*sabs(x(:,final),pf);
-       lf       = double(final);
+       llf      = cf(15:17) * (x(15:17,final)-x_d(15:17,final)).^2;
+       lf       = final;
        lf(final)= llf;
     else
        lf    = 0;

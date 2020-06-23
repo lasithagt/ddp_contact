@@ -45,5 +45,5 @@ function jac = Jac_kuka(q_)
   jac(41) = (sin(q(1))*cos(q(2))*cos(q(3)) - sin(q(3))*cos(q(1)))*sin(q(4)) + sin(q(1))*sin(q(2))*cos(q(4));
   jac(42) = -((sin(q(1))*cos(q(2))*cos(q(3)) - sin(q(3))*cos(q(1)))*cos(q(4)) - sin(q(1))*sin(q(2))*sin(q(4)))*sin(q(5)) + (sin(q(1))*sin(q(3))*cos(q(2)) + cos(q(1))*cos(q(3)))*cos(q(5));
 
-  jac = reshape(jac,6,[]);
+  jac = reshape(jac,7,[])';
 end

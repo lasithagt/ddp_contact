@@ -21,8 +21,7 @@ x_init = zeros(n,N+1);
 u_init = zeros(m,N+1);
 c_init = zeros(1,N+1);
 
-[x,un,~]  = traj_sim(x0, u0, DYNCST,zeros(1,5),x_init,c_init,u_init,zeros(7,N+1),zeros(7,N+1));
-
+[x,un,~]   = traj_sim(x0, u0, DYNCST,zeros(1,5),x_init,c_init,u_init,zeros(7,N+1),zeros(7,N+1));
 % [x0b,u0b,~]  = initialtraj(x0,u0_bar,DYNCST);
 u          = un;
 c          = 0.3 * sum(x(15:17,:).^2,1) ./ RC';
@@ -48,7 +47,7 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [1e-4,1e-6,0,0,0.5];
+rhao   = [1e-4,1e-4,0,0,1.9];
 
 
 alpha  = 1.5;
@@ -110,7 +109,7 @@ for i = 1:admmMaxIter
 
     if i < 1000
     %% Original simple ADMM 
-        %====== iLQR block incorporating the soft contact model
+        % ====== iLQR block incorporating the soft contact model
         % robot manipulator
         % consensus: 
         fprintf('\n=========== begin iLQR %d ===========\n',i);
@@ -119,14 +118,14 @@ for i = 1:admmMaxIter
         qdnew           = xnew(8:14,:);
         cnew            = 0.3 * sum(xnew(15:17,:).^2,1) ./ RC';
         
-        %====== ik block
+        % ====== ik block ====== %
         fprintf('\n=========== begin IK %d ===========\n',i);
         thetalist_old = thetalist;
         thetalistd_old = thetalistd;
         
         [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), 0*x0(8:14), rhao(4:5), qnew+q_lambda, qdnew+qd_lambda, 1);
         
-        %====== project operator to satisfy the constraint
+        % ====== project operator to satisfy the constraint ======= %
         x_bar_old = x_bar;
         c_bar_old = c_bar;
         u_bar_old = u_bar;
