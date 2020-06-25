@@ -53,11 +53,12 @@ rhao   = [1e-4,1e-4,0,0,1.9];
 alpha  = 1.5;
 alphak = 1;
 yita   = 0.999;
-admmMaxIter  = 20;
+admmMaxIter  = 10;
 
 %%%%%%% Primal variables
 % ddp primal
 xnew = x;
+qnew = x(1:7,:);
 unew = u;
 cnew = c;
 % ik primal
@@ -68,16 +69,17 @@ thetalistd = 0*xd_ik_ws;
 x0(8:14) = thetalistd(:,1);
 % projection
 u_bar = zeros(size(u));
-x_bar = zeros(size(x));
+x_bar = zeros(size(xnew));
 c_bar = zeros(size(c));
 
 alphak_v = ones(1,admmMaxIter+1);
 
 %%%%%%%% Dual variables
-x_lambda = 0*xnew - 0*x_bar;
-c_lambda = 0*cnew - 0*c_bar;
-u_lambda = 0*unew - 0*u_bar;
-q_lambda = 0*xnew(1:7,:) - 0*thetalist;
+x_lambda = xnew - x_bar;
+c_lambda = cnew - c_bar;
+u_lambda = unew - u_bar;
+q_lambda = thetalist - x_bar(1:7,:);
+% q_lambda = qnew - thetalist;
 qd_lambda = xnew(8:14,:) - thetalistd;
 % ck = (1/roll)*norm(x_lambda-x_lambda2)^2 + (1/roll)*norm(u_lambda-u_lambda2)^2 + roll*norm(x_bar-x_bar2)^2 + roll*norm(u_bar-u_bar2)^2;
     
@@ -108,12 +110,12 @@ plot_IK = 0;
 for i = 1:admmMaxIter
 
     if i < 1000
-    %% Original simple ADMM 
-        % ====== iLQR block incorporating the soft contact model
+    %% consensus ADMM
+      % ====== iLQR block incorporating the soft contact model
         % robot manipulator
         % consensus: 
         fprintf('\n=========== begin iLQR %d ===========\n',i);
-        [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, rhao, x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
+        [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,0], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
         qnew            = xnew(1:7,:);
         qdnew           = xnew(8:14,:);
         cnew            = 0.3 * sum(xnew(15:17,:).^2,1) ./ RC';
@@ -123,22 +125,56 @@ for i = 1:admmMaxIter
         thetalist_old = thetalist;
         thetalistd_old = thetalistd;
         
-        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), 0*x0(8:14), rhao(4:5), qnew+q_lambda, qdnew+qd_lambda, 1);
+        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), 0*x0(8:14), rhao(4:5), x_bar(1:7,:)-q_lambda, qdnew+qd_lambda, 1);
         
         % ====== project operator to satisfy the constraint ======= %
         x_bar_old = x_bar;
         c_bar_old = c_bar;
         u_bar_old = u_bar;
         
-        [x_bar, c_bar, u_bar] = proj(xnew+x_lambda, cnew+c_lambda, unew+u_lambda, Op.lims);
+        q_avg = (qnew + thetalist)/2;
+        x_avg = [q_avg;xnew(8:17,:)];
+        x_lambda_avg = [(x_lambda(1:7,:) + q_lambda)/2;x_lambda(8:17,:)];
+        [x_bar, c_bar, u_bar] = proj(x_avg+x_lambda_avg, cnew+c_lambda, unew+u_lambda, Op.lims);
 
         %====== dual variables update
         x_lambda = x_lambda + xnew - x_bar;
         c_lambda = c_lambda + cnew - c_bar;
         u_lambda = u_lambda + unew - u_bar;
-        q_lambda = q_lambda + qnew - thetalist;
+        q_lambda = q_lambda + thetalist - x_bar;
         qd_lambda = qd_lambda + qdnew - thetalistd;
         
+    %% Original simple ADMM 
+%         % ====== iLQR block incorporating the soft contact model
+%         % robot manipulator
+%         % consensus: 
+%         fprintf('\n=========== begin iLQR %d ===========\n',i);
+%         [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, rhao, x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
+%         qnew            = xnew(1:7,:);
+%         qdnew           = xnew(8:14,:);
+%         cnew            = 0.3 * sum(xnew(15:17,:).^2,1) ./ RC';
+%         
+%         % ====== ik block ====== %
+%         fprintf('\n=========== begin IK %d ===========\n',i);
+%         thetalist_old = thetalist;
+%         thetalistd_old = thetalistd;
+%         
+%         [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), 0*x0(8:14), rhao(4:5), qnew+q_lambda, qdnew+qd_lambda, 1);
+%         
+%         % ====== project operator to satisfy the constraint ======= %
+%         x_bar_old = x_bar;
+%         c_bar_old = c_bar;
+%         u_bar_old = u_bar;
+%         
+%         [x_bar, c_bar, u_bar] = proj(xnew+x_lambda, cnew+c_lambda, unew+u_lambda, Op.lims);
+% 
+%         %====== dual variables update
+%         x_lambda = x_lambda + xnew - x_bar;
+%         c_lambda = c_lambda + cnew - c_bar;
+%         u_lambda = u_lambda + unew - u_bar;
+%         q_lambda = q_lambda + qnew - thetalist;
+%         qd_lambda = qd_lambda + qdnew - thetalistd;
+    
     %% ADMM with relaxtion 
 %         %====== proximal operator to minimize to cost
 %         % robot manipulator
@@ -248,9 +284,10 @@ for i = 1:admmMaxIter
     res_u(:,i) = norm(unew - u_bar);
     res_x(:,i) = norm(xnew - x_bar);
     res_c(:,i) = norm(cnew - c_bar);
-    res_q(:,i) = norm(xnew(1:7,:) - thetalist);
+    res_q(:,i) = norm(thetalist - xnew);
+%     res_q(:,i) = norm(xnew(1:7,:) - thetalist);
     res_qd(:,i) = norm(xnew(8:14,:) - thetalistd);
-    
+  
     res_ulambda(:,i) = rhao(2) * norm(u_bar - u_bar_old);
     res_xlambda(:,i) = rhao(1) * norm(x_bar - x_bar_old);
     res_clambda(:,i) = rhao(3) * norm(c_bar - c_bar_old);
@@ -286,7 +323,7 @@ plot(l,res_u,'DisplayName','residue u');
 hold on;
 plot(l,res_x,'DisplayName','residue x');
 plot(l,res_c,'DisplayName','residue c');
-plot(l,res_q,'DisplayName','residue q');
+plot(l,res_q,'DisplayName','residue q and xnew');
 plot(l,res_qd,'DisplayName','residue qd');
 plot(l,res_ulambda,'DisplayName','residue ulambda');
 plot(l,res_xlambda,'DisplayName','residue xlambda');
@@ -402,10 +439,14 @@ function [x2, c2, u2] = proj(xnew, xnew_cen, unew, lims)
         end
         
         for j = 1:n
-            if xnew(j,i+1) > lims(1,2)
-                x2(j,i+1) = lims(1,2);
-            elseif xnew(j,i+1) < lims(1,1)
-                x2(j,i+1) = lims(1,1);
+            if j < 8
+                if xnew(j,i+1) > lims(1,2)
+                    x2(j,i+1) = lims(1,2);
+                elseif xnew(j,i+1) < lims(1,1)
+                    x2(j,i+1) = lims(1,1);
+                else
+                    x2(j,i+1) = xnew(j,i+1);
+                end
             else
                 x2(j,i+1) = xnew(j,i+1);
             end

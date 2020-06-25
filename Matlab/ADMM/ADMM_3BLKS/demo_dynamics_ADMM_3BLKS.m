@@ -16,7 +16,7 @@ T       = 100;              % horizon
 % x0      = [0 0.2 -0.1 0 0 0 0 0 0 0 0 0 0 0 0.1]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
 % u0      = -0.1 + zeros(6,T);     % initial controls
 
-Op.lims  = [-pi pi;             % wheel angle limits (radians)
+Op.lims  = [0 2*pi;             % wheel angle limits (radians)
              -30  30];            % acceleration limits (m/s^2)
 Op.plot  = 1;                    % plot the derivatives as well
 Op.maxIter = 5;
@@ -198,7 +198,7 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
 
     cx  = 5e-1 * [0.0*ones(1,7) 0.00000*ones(1,7) 0.0 0.0 0.05];           % running cost coefficients
     px  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .05]';     % smoothness scales for running cost
-
+    cv  = 5e-5*ones(1,7);
     % control cost
 
     lu    = cu * u.^2 + (rhao(2)/2) * ones(1,m) * (u-u_bar).^2;
