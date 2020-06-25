@@ -53,7 +53,7 @@ rhao   = [1e-4,1e-4,0,0,1.9];
 alpha  = 1.5;
 alphak = 1;
 yita   = 0.999;
-admmMaxIter  = 10;
+admmMaxIter  = 30;
 
 %%%%%%% Primal variables
 % ddp primal
@@ -75,12 +75,12 @@ c_bar = zeros(size(c));
 alphak_v = ones(1,admmMaxIter+1);
 
 %%%%%%%% Dual variables
-x_lambda = xnew - x_bar;
-c_lambda = cnew - c_bar;
-u_lambda = unew - u_bar;
-q_lambda = thetalist - x_bar(1:7,:);
+x_lambda = 0*xnew - 0*x_bar;
+c_lambda = 0*cnew - 0*c_bar;
+u_lambda = 0*unew - 0*u_bar;
+q_lambda = 0*thetalist - 0*x_bar(1:7,:);
 % q_lambda = qnew - thetalist;
-qd_lambda = xnew(8:14,:) - thetalistd;
+qd_lambda = 0*xnew(8:14,:) - 0*thetalistd;
 % ck = (1/roll)*norm(x_lambda-x_lambda2)^2 + (1/roll)*norm(u_lambda-u_lambda2)^2 + roll*norm(x_bar-x_bar2)^2 + roll*norm(u_bar-u_bar2)^2;
     
 res_u = zeros(1,admmMaxIter);
@@ -115,7 +115,11 @@ for i = 1:admmMaxIter
         % robot manipulator
         % consensus: 
         fprintf('\n=========== begin iLQR %d ===========\n',i);
-        [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,0], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
+        if i == 1
+            [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,1.9], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
+        else
+            [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,0], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
+        end
         qnew            = xnew(1:7,:);
         qdnew           = xnew(8:14,:);
         cnew            = 0.3 * sum(xnew(15:17,:).^2,1) ./ RC';
@@ -141,7 +145,7 @@ for i = 1:admmMaxIter
         x_lambda = x_lambda + xnew - x_bar;
         c_lambda = c_lambda + cnew - c_bar;
         u_lambda = u_lambda + unew - u_bar;
-        q_lambda = q_lambda + thetalist - x_bar;
+        q_lambda = q_lambda + thetalist - x_bar(1:7,:);
         qd_lambda = qd_lambda + qdnew - thetalistd;
         
     %% Original simple ADMM 
@@ -284,15 +288,16 @@ for i = 1:admmMaxIter
     res_u(:,i) = norm(unew - u_bar);
     res_x(:,i) = norm(xnew - x_bar);
     res_c(:,i) = norm(cnew - c_bar);
-    res_q(:,i) = norm(thetalist - xnew);
+    res_q(:,i) = norm(thetalist - x_bar(1:7,:));
 %     res_q(:,i) = norm(xnew(1:7,:) - thetalist);
     res_qd(:,i) = norm(xnew(8:14,:) - thetalistd);
-  
-    res_ulambda(:,i) = rhao(2) * norm(u_bar - u_bar_old);
-    res_xlambda(:,i) = rhao(1) * norm(x_bar - x_bar_old);
-    res_clambda(:,i) = rhao(3) * norm(c_bar - c_bar_old);
-    res_qlambda(:,i) = rhao(5) * norm(thetalist - thetalist_old);
-    res_qdlambda(:,i) = rhao(4) * norm(thetalistd - thetalistd_old);
+    res_q_consensus(:,i) = norm(thetalist - xnew(1:7,:));
+    
+%     res_ulambda(:,i) = rhao(2) * norm(u_bar - u_bar_old);
+%     res_xlambda(:,i) = rhao(1) * norm(x_bar - x_bar_old);
+%     res_clambda(:,i) = rhao(3) * norm(c_bar - c_bar_old);
+%     res_qlambda(:,i) = rhao(5) * norm(thetalist - thetalist_old);
+%     res_qdlambda(:,i) = rhao(4) * norm(thetalistd - thetalistd_old);
     
     [~,~,cost22]  = traj_sim(x0, unew, DYNCST, zeros(1,5),x_init,c_init,u_init,zeros(7,N+1),zeros(7,N+1));
     costcomp(:,i) = sum(cost22(:));
@@ -323,16 +328,20 @@ plot(l,res_u,'DisplayName','residue u');
 hold on;
 plot(l,res_x,'DisplayName','residue x');
 plot(l,res_c,'DisplayName','residue c');
-plot(l,res_q,'DisplayName','residue q and xnew');
-plot(l,res_qd,'DisplayName','residue qd');
-plot(l,res_ulambda,'DisplayName','residue ulambda');
-plot(l,res_xlambda,'DisplayName','residue xlambda');
-plot(l,res_clambda,'DisplayName','residue clambda');
-plot(l,res_qlambda,'DisplayName','residue qlambda');
-plot(l,res_qdlambda,'DisplayName','residue qdlambda');
+plot(l,res_q,'DisplayName','residue q');
+plot(l,res_q_consensus,'DisplayName','residue q between ddp and ik');
+% plot(l,res_qd,'DisplayName','residue qd');
+% plot(l,res_ulambda,'DisplayName','residue ulambda');
+% plot(l,res_xlambda,'DisplayName','residue xlambda');
+% plot(l,res_clambda,'DisplayName','residue clambda');
+% plot(l,res_qlambda,'DisplayName','residue qlambda');
+% plot(l,res_qdlambda,'DisplayName','residue qdlambda');
 title('residue of primal and dual variebles for accelerated ADMM')
 xlabel('ADMM iteration')
 ylabel('residue')
+set(gca, 'YScale', 'log')
+set(gca, 'XScale', 'linear')
+legend
 hold off;
 
 subplot(1,2,2)
