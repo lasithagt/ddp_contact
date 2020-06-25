@@ -17,7 +17,7 @@ T       = 100;              % horizon
 % u0      = -0.1 + zeros(6,T);     % initial controls
 
 Op.lims  = [0 2*pi;             % wheel angle limits (radians)
-             -30  30];            % acceleration limits (m/s^2)
+             -60  60];            % acceleration limits (m/s^2)
 Op.plot  = 1;                    % plot the derivatives as well
 Op.maxIter = 5;
 
@@ -191,7 +191,7 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     RC_expand = repmat(RC(i)', 1, size(x,2)/numel(i));
     cen   = 0.3 * sum(x(15:17,:).^2,1) ./ RC_expand;
     
-    cu  = 5e-5*ones(1,7);         % control cost coefficients
+    cu  = 5e-10*ones(1,7);         % control cost coefficients
 
     cf  = 5e-1 * [0.0*ones(1,7) 0.00000*ones(1,7) 0.0 0.0 0.05];        % final cost coefficients
     pf  = 4e-1 * [0.0*ones(1,7) 0.01*ones(1,7) .0 .00 .05 ]';    % smoothness scales for final cost
@@ -208,7 +208,7 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     % final cost
     if any(final)
        llf      = cf(15:17) * (x(15:17,final)-x_d(15:17,final)).^2;
-       lf       = final;
+       lf       = double(final);
        lf(final)= llf;
     else
        lf    = 0;
@@ -216,7 +216,7 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
 
 %     cx(15:17) * sum((x(15:17,:)-x_d(15:17,:)).^2,2);
     % running cost
-    lx     = cx(15:17) * (x(15:17,:)-x_d(15:17,:)).^2 + (rhao(1)/2) * ones(1,n)*(x-x_bar).^2 + ...
+    lx     = cx(15:17) * (x(15:17,:)-x_d(15:17,:)).^2 + (rhao(1)/2) * [ones(1,7), zeros(1,10)]*(x-x_bar).^2 + ...
         (rhao(3)/2)*(cen-c_bar).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,:)-thetalist_bar).^2 + ...
         (rhao(4)/2) * ones(1,7)*(x(8:14,:)-thetalistd_bar).^2; 
     

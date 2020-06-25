@@ -47,13 +47,13 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [1e-4,1e-4,0,0,1.9];
+rhao   = [1e-3, 1e-6, 0, 0, 1.9];
 
 
 alpha  = 1.5;
 alphak = 1;
 yita   = 0.999;
-admmMaxIter  = 30;
+admmMaxIter  = 10;
 
 %%%%%%% Primal variables
 % ddp primal
@@ -129,7 +129,7 @@ for i = 1:admmMaxIter
         thetalist_old = thetalist;
         thetalistd_old = thetalistd;
         
-        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), 0*x0(8:14), rhao(4:5), x_bar(1:7,:)-q_lambda, qdnew+qd_lambda, 1);
+        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), 0*x0(8:14), 0.1*rhao(4:5), x_bar(1:7,:)-q_lambda, qdnew+qd_lambda, 1);
         
         % ====== project operator to satisfy the constraint ======= %
         x_bar_old = x_bar;
@@ -137,7 +137,7 @@ for i = 1:admmMaxIter
         u_bar_old = u_bar;
         
         q_avg = (qnew + thetalist)/2;
-        x_avg = [q_avg;xnew(8:17,:)];
+        x_avg = [q_avg; xnew(8:17,:)];
         x_lambda_avg = [(x_lambda(1:7,:) + q_lambda)/2;x_lambda(8:17,:)];
         [x_bar, c_bar, u_bar] = proj(x_avg+x_lambda_avg, cnew+c_lambda, unew+u_lambda, Op.lims);
 
