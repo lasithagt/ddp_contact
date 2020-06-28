@@ -19,7 +19,7 @@ T       = 100;              % horizon
 Op.lims  = [0 2*pi;             % wheel angle limits (radians)
              -60  60];            % acceleration limits (m/s^2)
 Op.plot  = 1;                    % plot the derivatives as well
-Op.maxIter = 5;
+Op.maxIter = 10;
 
 global x_des
 %% desired path to track
@@ -216,7 +216,7 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
 
 %     cx(15:17) * sum((x(15:17,:)-x_d(15:17,:)).^2,2);
     % running cost
-    lx     = cx(15:17) * (x(15:17,:)-x_d(15:17,:)).^2 + (rhao(1)/2) * [ones(1,7), zeros(1,10)]*(x-x_bar).^2 + ...
+    lx     = cx(15:17) * (x(15:17,:)-x_d(15:17,:)).^2 + (rhao(1)/2)*ones(1,7)*(x(1:7,:)-x_bar(1:7,:)).^2 + ...
         (rhao(3)/2)*(cen-c_bar).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,:)-thetalist_bar).^2 + ...
         (rhao(4)/2) * ones(1,7)*(x(8:14,:)-thetalistd_bar).^2; 
     

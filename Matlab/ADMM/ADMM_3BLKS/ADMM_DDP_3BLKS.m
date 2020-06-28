@@ -17,7 +17,7 @@ iter = 5;
 
         
 % --- initial trajectory
-x_init = zeros(n,N+1);
+x_init = zeros(7,N+1);
 u_init = zeros(m,N+1);
 c_init = zeros(1,N+1);
 
@@ -47,13 +47,13 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [1e-3, 1e-6, 0, 0, 1.9];
+rhao   = [1e-3, 0, 0, 0, 1e-3];
 
 
 alpha  = 1.5;
 alphak = 1;
 yita   = 0.999;
-admmMaxIter  = 10;
+admmMaxIter  = 5;
 
 %%%%%%% Primal variables
 % ddp primal
@@ -69,13 +69,13 @@ thetalistd = 0*xd_ik_ws;
 x0(8:14) = thetalistd(:,1);
 % projection
 u_bar = zeros(size(u));
-x_bar = zeros(size(xnew));
+x_bar = zeros(size(qnew));
 c_bar = zeros(size(c));
 
 alphak_v = ones(1,admmMaxIter+1);
 
 %%%%%%%% Dual variables
-x_lambda = 0*xnew - 0*x_bar;
+x_lambda = 0*qnew - 0*x_bar;
 c_lambda = 0*cnew - 0*c_bar;
 u_lambda = 0*unew - 0*u_bar;
 q_lambda = 0*thetalist - 0*x_bar(1:7,:);
@@ -115,11 +115,11 @@ for i = 1:admmMaxIter
         % robot manipulator
         % consensus: 
         fprintf('\n=========== begin iLQR %d ===========\n',i);
-        if i == 1
-            [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,1.9], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
-        else
-            [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,0], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
-        end
+%         if i == 1
+%             [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,1e-3], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
+%         else
+        [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,0], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
+%         end
         qnew            = xnew(1:7,:);
         qdnew           = xnew(8:14,:);
         cnew            = 0.3 * sum(xnew(15:17,:).^2,1) ./ RC';
@@ -129,7 +129,7 @@ for i = 1:admmMaxIter
         thetalist_old = thetalist;
         thetalistd_old = thetalistd;
         
-        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), 0*x0(8:14), 0.1*rhao(4:5), x_bar(1:7,:)-q_lambda, qdnew+qd_lambda, 1);
+        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), 0*x0(8:14), rhao(4:5), x_bar(1:7,:)-q_lambda, qdnew+qd_lambda, 1);
         
         % ====== project operator to satisfy the constraint ======= %
         x_bar_old = x_bar;
@@ -137,15 +137,16 @@ for i = 1:admmMaxIter
         u_bar_old = u_bar;
         
         q_avg = (qnew + thetalist)/2;
-        x_avg = [q_avg; xnew(8:17,:)];
-        x_lambda_avg = [(x_lambda(1:7,:) + q_lambda)/2;x_lambda(8:17,:)];
-        [x_bar, c_bar, u_bar] = proj(x_avg+x_lambda_avg, cnew+c_lambda, unew+u_lambda, Op.lims);
+%         x_avg = [q_avg; xnew(8:17,:)];
+        x_lambda_avg = (x_lambda(1:7,:) + q_lambda)/2;
+%         x_lambda_avg = [(x_lambda(1:7,:) + q_lambda)/2;x_lambda(8:17,:)];
+        [x_bar, c_bar, u_bar] = proj(q_avg+x_lambda_avg, cnew+c_lambda, unew+u_lambda, Op.lims);
 
         %====== dual variables update
-        x_lambda = x_lambda + xnew - x_bar;
+        x_lambda = x_lambda + qnew - x_bar;
         c_lambda = c_lambda + cnew - c_bar;
         u_lambda = u_lambda + unew - u_bar;
-        q_lambda = q_lambda + thetalist - x_bar(1:7,:);
+        q_lambda = q_lambda + thetalist - x_bar;
         qd_lambda = qd_lambda + qdnew - thetalistd;
         
     %% Original simple ADMM 
@@ -286,12 +287,12 @@ for i = 1:admmMaxIter
     %%
     % ====== residue ======= %
     res_u(:,i) = norm(unew - u_bar);
-    res_x(:,i) = norm(xnew - x_bar);
+    res_x(:,i) = norm(qnew - x_bar);
     res_c(:,i) = norm(cnew - c_bar);
     res_q(:,i) = norm(thetalist - x_bar(1:7,:));
 %     res_q(:,i) = norm(xnew(1:7,:) - thetalist);
     res_qd(:,i) = norm(xnew(8:14,:) - thetalistd);
-    res_q_consensus(:,i) = norm(thetalist - xnew(1:7,:));
+    res_q_consensus(:,i) = norm(thetalist - qnew);
     
 %     res_ulambda(:,i) = rhao(2) * norm(u_bar - u_bar_old);
 %     res_xlambda(:,i) = rhao(1) * norm(x_bar - x_bar_old);
