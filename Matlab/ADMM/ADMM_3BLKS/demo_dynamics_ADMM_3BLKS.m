@@ -16,7 +16,7 @@ T       = 100;              % horizon
 % x0      = [0 0.2 -0.1 0 0 0 0 0 0 0 0 0 0 0 0.1]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
 % u0      = -0.1 + zeros(6,T);     % initial controls
 
-Op.lims  = [0 2*pi;             % wheel angle limits (radians)
+Op.lims  = [-2*pi 2*pi;             % wheel angle limits (radians)
              -60  60];            % acceleration limits (m/s^2)
 Op.plot  = 1;                    % plot the derivatives as well
 Op.maxIter = 10;

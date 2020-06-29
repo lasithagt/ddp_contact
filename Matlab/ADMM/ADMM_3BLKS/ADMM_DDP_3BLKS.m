@@ -47,7 +47,7 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [1e-3, 0, 0, 0, 1e-3];
+rhao   = [1e-1, 0, 0, 0, 1e-3];
 
 
 alpha  = 1.5;
@@ -115,11 +115,11 @@ for i = 1:admmMaxIter
         % robot manipulator
         % consensus: 
         fprintf('\n=========== begin iLQR %d ===========\n',i);
-%         if i == 1
-%             [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,1e-3], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
-%         else
-        [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,0], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
-%         end
+        if i == 1
+            [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,1], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
+        else
+            [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,0], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
+        end
         qnew            = xnew(1:7,:);
         qdnew           = xnew(8:14,:);
         cnew            = 0.3 * sum(xnew(15:17,:).^2,1) ./ RC';
