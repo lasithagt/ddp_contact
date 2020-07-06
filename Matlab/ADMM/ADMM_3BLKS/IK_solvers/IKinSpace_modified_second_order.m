@@ -74,7 +74,9 @@ while err && i < maxiterations
                 + 0.00 * (rho(1)) * (thetalist_d - qd_bar); 
     
   
-    thetalist_  = thetalist + thetalist_d - 0.1 * (rho(2)) * (thetalist - q_bar);
+%     thetalist_  = thetalist + thetalist_d - 0.1 * (rho(2)) * (thetalist - q_bar);
+    thetalist_  = thetalist + 0.5 * JINV * Vs - 0.5 * (rho(2)) * (thetalist - q_bar);
+
 %     thetalist_  = thetalist_ - 1 * (rho(2)) * (thetalist_ - q_bar);
     
     Tsb = FKinSpace(M, Slist, thetalist_);
