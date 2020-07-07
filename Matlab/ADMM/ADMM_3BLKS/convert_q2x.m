@@ -1,4 +1,4 @@
-function p = convert_q2x(x)
+function [x, y, z] = convert_q2x(x)
 
     q = x(1:7,:);
     [Slist, M] = manipulator_POE();

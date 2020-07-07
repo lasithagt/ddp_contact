@@ -1,6 +1,6 @@
 function [x, u, cost] = ADMM_DDP_3BLKS(DYNCST, x0, u0, Op)
 %---------------------- user-adjustable parameters ------------------------
-global RC K x_des inertial_params
+global RC x_des inertial_params
 % --- initial sizes and controls
 n   = size(x0,1);          % dimension of state vector
 m   = size(u0, 1);          % dimension of control vector
@@ -22,10 +22,13 @@ u_init = zeros(m,N+1);
 c_init = zeros(1,N+1);
 
 [x,un,~]   = traj_sim(x0, u0, DYNCST,zeros(1,5),x_init,c_init,u_init,zeros(7,N+1),zeros(7,N+1));
-% [x0b,u0b,~]  = initialtraj(x0,u0_bar,DYNCST);
 u          = un;
-c          = 0.3 * sum(x(15:17,:).^2,1) ./ RC';
 
+for j = 1:size(x_init,2)
+    J         = Jac_kuka(x(1:7, j)); % jacobian at the base of the manipulator
+    x_dot     = J * x(8:14, j);
+    c(j)      = 0.3 * sum(x_dot(1:3).^2, 1) ./ RC(j);
+end
 % user plotting
 % Op.plotFn(x);
 
@@ -47,7 +50,7 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [1, 1e-5, 0, 0, 1];
+rhao   = [1, 1e-5, 1e-5, 0, 1];
 
 
 alpha  = 1.5;
@@ -122,18 +125,30 @@ for i = 1:admmMaxIter
 %         if i == 1
 %             [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,1], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
 %         else
-            [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,0], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
+        [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,0], x_bar-x_lambda, c_bar-c_lambda, u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
 %         end
         qnew            = xnew(1:7,:);
         qdnew           = xnew(8:14,:);
-        cnew            = 0.3 * sum(xnew(15:17,:).^2,1) ./ RC';
+        
+        [xd_x, xd_y, xd_z] = convert_q2x(xnew);
+%         [~, RC, ~] = curvature([xd_x, xd_y, xd_z]);
+%         RC(1) = RC(2);
+%         RC(end) = RC(end);
+%         RC(isnan(RC)) = 1000;
+%         RC(1:5) = 1000;
+        
+        for j = 1:size(xnew, 2)
+            J         = Jac_kuka(xnew(1:7, j)); % jacobian at the base of the manipulator
+            x_dot     = J * xnew(8:14, j);
+            cnew(j)   = 0.3 * sum(x_dot(1:3).^2, 1) ./ RC(j);
+        end
         
         % ====== ik block ====== %
         fprintf('\n=========== begin IK %d ===========\n',i);
         thetalist_old = thetalist;
         thetalistd_old = thetalistd;
         
-        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), 0*x0(8:14), rhao(4:5), x_bar(1:7,:)-q_lambda, qdnew+qd_lambda, 1);
+        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), rhao(4:5), x_bar(1:7,:)-q_lambda, qdnew+qd_lambda, 1);
         
         % ====== project operator to satisfy the constraint ======= %
         x_bar_old = x_bar;
@@ -144,7 +159,7 @@ for i = 1:admmMaxIter
 %         x_avg = [q_avg; xnew(8:17,:)];
         x_lambda_avg = (x_lambda(1:7,:) + q_lambda)/2;
 %         x_lambda_avg = [(x_lambda(1:7,:) + q_lambda)/2;x_lambda(8:17,:)];
-        [x_bar, c_bar, u_bar] = proj(q_avg+x_lambda_avg, cnew+c_lambda, unew+u_lambda, Op.lims);
+        [x_bar, c_bar, u_bar] = proj(q_avg+x_lambda_avg, xnew, cnew+c_lambda, unew+u_lambda, Op.lims);
 
         %====== dual variables update
         x_lambda = x_lambda + qnew - x_bar;
@@ -437,7 +452,7 @@ function [xnew,unew,cnew] = traj_sim(x0, u0, DYNCST, rhao,x_bar,c_bar,u_bar, the
     [~, cnew(:,N+1)] = DYNCST(xnew(:,N+1),nan(m,1),rhao,x_bar(:,N+1),c_bar(:,N+1),u_bar(:,N+1), thetalist_bar(:,N+1), thetalistd_bar(:,N+1),i);
 
 
-function [x2, c2, u2] = proj(xnew, xnew_cen, unew, lims)
+function [x2, c2, u2] = proj(xnew, x, xnew_cen, unew, lims)
     % Project operator(control-limit): simply clamp the control output
     N = size(unew, 2);
     m = size(unew, 1);
@@ -447,12 +462,11 @@ function [x2, c2, u2] = proj(xnew, xnew_cen, unew, lims)
     c2 = xnew_cen;
 
     for i =1:N
-        
-        if ((xnew_cen) > 0.5*xnew(end,i+1))
-            c2(i+1) = 0.5*xnew(end,i+1);
-        end
-        
+         if ((xnew_cen(i + 1)) > 0.5 * abs(x(end, i + 1)))
+            c2(i + 1) = 0.5 * abs(x(end, i + 1));
+        end 
         for j = 1:n
+
             if j < 8
                 if xnew(j,i+1) > lims(1,2)
                     x2(j,i+1) = lims(1,2);
@@ -464,13 +478,25 @@ function [x2, c2, u2] = proj(xnew, xnew_cen, unew, lims)
             else
                 x2(j,i+1) = xnew(j,i+1);
             end
+            
+            if (j > 7 && j < 15)
+                if xnew(j,i+1) > lims(2,2)
+                    x2(j,i+1) = lims(2,2);
+                elseif xnew(j,i+1) < lims(2,1)
+                    x2(j,i+1) = lims(2,1);
+                else
+                    x2(j,i+1) = xnew(j,i+1);
+                end
+            else
+                x2(j,i+1) = xnew(j,i+1);
+            end
         end
 
         for k = 1:m
-            if unew(k,i) > lims(2,2)
-                u2(k,i) = lims(2,2);
-            elseif unew(k,i) < lims(2,1)
-                u2(k,i) = lims(2,1);
+            if unew(k,i) > lims(4,2)
+                u2(k,i) = lims(4,2);
+            elseif unew(k,i) < lims(4,1)
+                u2(k,i) = lims(4,1);
             else
                 u2(k,i) = unew(k,i);
             end
