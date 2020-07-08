@@ -185,16 +185,18 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     global xd RC
     m = size(u,1);
     n = size(x,1);
-
+    N = size(x,2);
     final = isnan(u(1,:));
     u(:,final)  = 0;
     u_bar(:,final) = 0;
+    cen_ = zeros(2,numel(i));
     
     % RC_expand = repmat(RC(i)', 1, size(x,2)/numel(i));
     for j = 1:numel(i)
         J         = Jac_kuka(x(1:7, j)); % jacobian at the base of the manipulator
         x_dot     = J * x(8:14, j);
-        cen_(j)   = 0.3 * sum(x_dot(1:3).^2, 1) ./ RC(j);
+        cen_(1,j) = 0.3 * sum(x_dot(1:3).^2, 1) ./ RC(j);
+        cen_(2,j) = x(end, j);
     end
     
     cen = repmat(cen_, 1, size(x,2)/numel(i));
@@ -229,7 +231,7 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
 %     cx(15:17) * sum((x(15:17,:)-x_d(15:17,:)).^2,2);
     % running cost
     lx     = cx(15:17) * (x(15:17,:)-x_d(15:17,:)).^2 + (rhao(1)/2)*ones(1,7)*(x(1:7,:)-x_bar(1:7,:)).^2 + ...
-        (rhao(3)/2)*(cen-c_bar).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,:)-thetalist_bar).^2 + ...
+        (rhao(3)/2)*ones(1,2)*(cen-c_bar).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,:)-thetalist_bar).^2 + ...
         (rhao(4)/2) * ones(1,7)*(x(8:14,:)-thetalistd_bar).^2; 
     
     

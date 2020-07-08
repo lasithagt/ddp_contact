@@ -50,20 +50,21 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [1, 1e-5, 1e-5, 0, 1];
+rhao   = [1, 0, 1e-5, 0, 1];
 
 
 alpha  = 1.5;
 alphak = 1;
 yita   = 0.999;
-admmMaxIter  = 30;
+admmMaxIter  = 10;
 
 %%%%%%% Primal variables
 % ddp primal
 xnew = x;
 qnew = x(1:7,:);
 unew = u;
-cnew = c;
+cnew = [c;x(end,:)]; % include both centrifugal and normal forces
+
 % ik primal
 % warm start by ik
 [x_ik_ws, xd_ik_ws, fk]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], zeros(7, size(x_des,2)), zeros(7, size(x_des,2)), 1);
@@ -74,7 +75,7 @@ x0(8:14) = thetalistd(:,1);
 u_bar = zeros(size(u));
 % x_bar = zeros(size(qnew));
 x_bar = x_ik_ws;
-c_bar = zeros(size(c));
+c_bar = cnew;
 
 alphak_v = ones(1,admmMaxIter+1);
 
@@ -140,7 +141,8 @@ for i = 1:admmMaxIter
         for j = 1:size(xnew, 2)
             J         = Jac_kuka(xnew(1:7, j)); % jacobian at the base of the manipulator
             x_dot     = J * xnew(8:14, j);
-            cnew(j)   = 0.3 * sum(x_dot(1:3).^2, 1) ./ RC(j);
+            cnew(1,j) = 0.3 * sum(x_dot(1:3).^2, 1) ./ RC(j);
+            cnew(2,j) = xnew(end,j); 
         end
         
         % ====== ik block ====== %
@@ -159,7 +161,7 @@ for i = 1:admmMaxIter
 %         x_avg = [q_avg; xnew(8:17,:)];
         x_lambda_avg = (x_lambda(1:7,:) + q_lambda)/2;
 %         x_lambda_avg = [(x_lambda(1:7,:) + q_lambda)/2;x_lambda(8:17,:)];
-        [x_bar, c_bar, u_bar] = proj(q_avg+x_lambda_avg, xnew, cnew+c_lambda, unew+u_lambda, Op.lims);
+        [x_bar, c_bar, u_bar] = proj(q_avg+x_lambda_avg, cnew+c_lambda, unew+u_lambda, Op.lims);
 
         %====== dual variables update
         x_lambda = x_lambda + qnew - x_bar;
@@ -452,7 +454,7 @@ function [xnew,unew,cnew] = traj_sim(x0, u0, DYNCST, rhao,x_bar,c_bar,u_bar, the
     [~, cnew(:,N+1)] = DYNCST(xnew(:,N+1),nan(m,1),rhao,x_bar(:,N+1),c_bar(:,N+1),u_bar(:,N+1), thetalist_bar(:,N+1), thetalistd_bar(:,N+1),i);
 
 
-function [x2, c2, u2] = proj(xnew, x, xnew_cen, unew, lims)
+function [x2, c2, u2] = proj(xnew, xnew_cen, unew, lims)
     % Project operator(control-limit): simply clamp the control output
     N = size(unew, 2);
     m = size(unew, 1);
@@ -462,8 +464,8 @@ function [x2, c2, u2] = proj(xnew, x, xnew_cen, unew, lims)
     c2 = xnew_cen;
 
     for i =1:N
-         if ((xnew_cen(i + 1)) > 0.5 * abs(x(end, i + 1)))
-            c2(i + 1) = 0.5 * abs(x(end, i + 1));
+        if ((xnew_cen(i + 1)) > 0.5 * abs(xnew_cen(2, i + 1)))
+            c2(1, i + 1) = 0.5 * abs(xnew_cen(2, i + 1));
         end 
         for j = 1:n
 
