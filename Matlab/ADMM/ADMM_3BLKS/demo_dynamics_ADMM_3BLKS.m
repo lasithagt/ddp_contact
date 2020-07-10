@@ -12,14 +12,14 @@ full_DDP = false;
 % set up the optimization problem
 DYNCST          = @(x,u,rhao,x_bar,c_bar,u_bar,thetalist_bar,thetalistd_bar,i) robot_dyn_cst(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar, full_DDP);
 
-T       = 100;              % horizon 
+T       = 200;              % horizon 
 % x0      = [0 0.2 -0.1 0 0 0 0 0 0 0 0 0 0 0 0.1]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
 % u0      = -0.1 + zeros(6,T);     % initial controls
 
-Op.lims  = [-2*pi 2*pi; % position
+Op.lims  = [0 2*pi; % position
             -4 4;       % velocity
             -10 10;     % force
-             -20  20];  % acceleration limits (m/s^2)
+             -5  5];  % acceleration limits (m/s^2)
 Op.plot  = 1;           % plot the derivatives as well
 Op.maxIter = 10;
 
@@ -35,7 +35,7 @@ Rd_p = 0 * ones(1, numel(t));
 Rd_y = 0 * ones(1, numel(t));
 % [xd_x, xd_y, xd_z] = lissajous_curve(t, 1.1608);
 
-xd_f = -0.0 * sin(1*t) + 5.5;
+xd_f = -2.0 * sin(5*t) + 5.5;
 
 x_des = [xd_x; xd_y; xd_z; Rd_r; Rd_p; Rd_y];
 
@@ -115,7 +115,7 @@ function y = robot_dynamics(x, u, i)
     u(:,final)  = 0;
 
     % constants
-    dt  = 0.01;     % h = timestep (seconds)
+    dt  = 0.02;     % h = timestep (seconds)
 
     RC_d = repmat(RC(i), 1,size(x,2)/numel(i));
     K_d  = repmat(K(:,i), 1,size(x,2)/numel(i));
@@ -204,11 +204,11 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     
     cu  = 5e-10*ones(1,7);         % control cost coefficients
 
-    cf  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.0 0.0 0.01];        % final cost coefficients
-    pf  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) .0 .00 .01]';    % smoothness scales for final cost
+    cf  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05];        % final cost coefficients
+    pf  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05]';    % smoothness scales for final cost
 
-    cx  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.0 0.0 0.01];           % running cost coefficients
-    px  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) .0 .00 .01]';     % smoothness scales for running cost
+    cx  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05];           % running cost coefficients
+    px  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05]';     % smoothness scales for running cost
     cv  = 5e-5*ones(1,7);
     % control cost
 
@@ -218,10 +218,10 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     
     % final cost
     if any(final)
-       llf      = cx(15:17) * (x(15:17,final)-x_d(15:17,final)).^2 + (rhao(1)/2)*ones(1,7)*(x(1:7,final)-x_bar(1:7,final)).^2 + ...
-                  (rhao(3)/2)*(cen(final)-c_bar(final)).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,final)-thetalist_bar(:,final)).^2 + ...
-                  (rhao(4)/2) * ones(1,7)*(x(8:14,final)-thetalistd_bar(:,final)).^2; 
-%        llf      = 0;
+%        llf      = cx(15:17) * (x(15:17,final)-x_d(15:17,final)).^2 + (rhao(1)/2)*ones(1,7)*(x(1:7,final)-x_bar(1:7,final)).^2 + ...
+%                   (rhao(3)/2)*(cen(final)-c_bar(final)).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,final)-thetalist_bar(:,final)).^2 + ...
+%                   (rhao(4)/2) * ones(1,7)*(x(8:14,final)-thetalistd_bar(:,final)).^2; 
+       llf      = 0;
        lf       = double(final);
        lf(final)= llf;
     else

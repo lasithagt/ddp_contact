@@ -50,7 +50,7 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [1, 0, 1e-5, 0, 1];
+rhao   = [2, 1e-3, 1e-5, 0, 2];
 
 
 alpha  = 1.5;
@@ -105,11 +105,7 @@ plot_IK = 0;
 
 % q_bar  = zeros(7, size(x_des,2));
 % qd_bar = zeros(7, size(x_des,2));
-% 
-% [theta0, ~, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], q_bar, qd_bar, 0);
-% for i = 1:N
-%     unew(:,i)   = -G_kuka(inertial_params, theta0(:,i))'; 
-% end
+
     
 %% ADMM iteration
 for i = 1:admmMaxIter
@@ -132,11 +128,11 @@ for i = 1:admmMaxIter
         qdnew           = xnew(8:14,:);
         
         [xd_x, xd_y, xd_z] = convert_q2x(xnew);
-%         [~, RC, ~] = curvature([xd_x, xd_y, xd_z]);
-%         RC(1) = RC(2);
-%         RC(end) = RC(end);
-%         RC(isnan(RC)) = 1000;
-%         RC(1:5) = 1000;
+        [~, RC, ~] = curvature([xd_x, xd_y, xd_z]);
+        RC(1) = RC(2);
+        RC(end) = RC(end);
+        RC(isnan(RC)) = 1000;
+        RC(1:5) = 1000;
         
         for j = 1:size(xnew, 2)
             J         = Jac_kuka(xnew(1:7, j)); % jacobian at the base of the manipulator
@@ -464,8 +460,8 @@ function [x2, c2, u2] = proj(xnew, xnew_cen, unew, lims)
     c2 = xnew_cen;
 
     for i =1:N
-        if ((xnew_cen(i + 1)) > 0.5 * abs(xnew_cen(2, i + 1)))
-            c2(1, i + 1) = 0.5 * abs(xnew_cen(2, i + 1));
+        if ((xnew_cen(1, i + 1)) > 0.4 * abs(xnew_cen(2, i + 1)))
+            c2(1, i + 1) = 0.4 * abs(xnew_cen(2, i + 1));
         end 
         for j = 1:n
 
