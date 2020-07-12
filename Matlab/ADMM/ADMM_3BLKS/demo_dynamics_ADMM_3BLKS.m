@@ -21,7 +21,7 @@ Op.lims  = [0 2*pi; % position
             -10 10;     % force
              -5  5];  % acceleration limits (m/s^2)
 Op.plot    = 1;           % plot the derivatives as well
-Op.maxIter = 5;
+Op.maxIter = 10;
 
 global x_des
 %% desired path to track
@@ -87,12 +87,12 @@ else
 end
 n        = 18;
 m        = 8;
-x0       = [q0' zeros(1,7) 0 0 0 0.02]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
+x0       = [q0' zeros(1,7) 0 0 0 0.04]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
 u0       = -0. + zeros(m, T);                                                     % initial controls
 
 u0 (3,1) = 0;
 q_des    = repmat(q0, 1, numel(t));
-dt_dyn   = 0.01 * ones(1, numel(t)); 
+dt_dyn   = 0.04 * ones(1, numel(t)); 
 xd       = [q_des; zeros(7,numel(t)); zeros(2,numel(t)) ;xd_f; dt_dyn];
  
 
@@ -165,7 +165,7 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     cf  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1];        % final cost coefficients
     pf  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1]';    % smoothness scales for final cost
 
-    cx  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1];           % running cost coefficients
+    cx  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.001];           % running cost coefficients
     px  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1]';     % smoothness scales for running cost
     % control cost
 

@@ -13,7 +13,7 @@ u   = u0;                   % initial control sequence
 %         'dcost',nan);
 % trace = repmat(trace,[min(Op.maxIter,1e6) 1]);
 % trace(1).iter = 1;
-iter = 5;
+iter = 10;
 
         
 % --- initial trajectory
@@ -50,7 +50,7 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [2, 1e-3, 1e-5, 0, 2];
+rhao   = [1, 1e-2, 1e-2, 0, 1];
 
 
 alpha  = 1.5;

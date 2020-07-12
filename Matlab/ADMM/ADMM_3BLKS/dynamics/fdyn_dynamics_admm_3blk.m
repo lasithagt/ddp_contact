@@ -85,7 +85,7 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
         F_dot        = F_f_dot - 800 * x_dot(3) * [0;0;1] - 100.0 * xdd_e(3) * [0;0;1];
         
         % dynamic time
-        dt_f         = u(8,i);
+        dt_f         = -0.1*x(end,i) + u(8,i);
         ret(:,i)     = [qdd; F_dot; dt_f];
 %         ret(:,i) = [qdd; zeros(3,1)];
         
