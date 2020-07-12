@@ -56,7 +56,7 @@ rhao   = [2, 1e-3, 1e-5, 0, 2];
 alpha  = 1.5;
 alphak = 1;
 yita   = 0.999;
-admmMaxIter  = 10;
+admmMaxIter  = 5;
 
 %%%%%%% Primal variables
 % ddp primal
