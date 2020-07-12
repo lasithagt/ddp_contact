@@ -12,7 +12,7 @@ full_DDP = false;
 % set up the optimization problem
 DYNCST          = @(x,u,rhao,x_bar,c_bar,u_bar,thetalist_bar,thetalistd_bar,i) robot_dyn_cst(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar, full_DDP);
 
-T       = 200;              % horizon 
+T        = 200;              % horizon 
 % x0      = [0 0.2 -0.1 0 0 0 0 0 0 0 0 0 0 0 0.1]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
 % u0      = -0.1 + zeros(6,T);     % initial controls
 
@@ -20,7 +20,7 @@ Op.lims  = [0 2*pi; % position
             -4 4;       % velocity
             -10 10;     % force
              -5  5];  % acceleration limits (m/s^2)
-Op.plot  = 1;           % plot the derivatives as well
+Op.plot    = 1;           % plot the derivatives as well
 Op.maxIter = 10;
 
 global x_des
@@ -35,7 +35,7 @@ Rd_p = 0 * ones(1, numel(t));
 Rd_y = 0 * ones(1, numel(t));
 % [xd_x, xd_y, xd_z] = lissajous_curve(t, 1.1608);
 
-xd_f = -2.0 * sin(5*t) + 5.5;
+xd_f = -2.0 * sin(5 * t) + 5.5;
 
 x_des = [xd_x; xd_y; xd_z; Rd_r; Rd_p; Rd_y];
 
@@ -85,14 +85,16 @@ if (s == 1)
 else
     error("Inverse Solution Not Found...")
 end
-
-x0       = [q0' zeros(1,7) 0 0 0]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
-u0       = -0. + zeros(7, T);                                                     % initial controls
+n        = 18;
+m        = 8;
+x0       = [q0' zeros(1,7) 0 0 0 0.02]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
+u0       = -0. + zeros(m, T);                                                     % initial controls
 
 u0 (3,1) = 0;
 q_des    = repmat(q0, 1, numel(t));
-xd       = [q_des; zeros(7,numel(t)); zeros(2,numel(t)) ;xd_f];
-
+dt_dyn   = 0.01 * ones(1, numel(t)); 
+xd       = [q_des; zeros(7,numel(t)); zeros(2,numel(t)) ;xd_f; dt_dyn];
+ 
 
 %% For testing IK
 % q_bar  = zeros(7, size(x_des,2));
@@ -125,55 +127,11 @@ function y = robot_dynamics(x, u, i)
     xdd = fdyn_dynamics_admm_3blk(x, u, RC_d, K_d);
     
     % modify here
-    dy  = [xd; xdd(1:end,:)];     % change in state
+    dy     = [xd; xdd(1:end,:)];     % change in state
 
-    y   = x + dy * dt;   % new state
+%     dt_dyn = x(end,:) + dy(end,:);
+    y      = x +  x(end,:) .* dy;   % new state
 
-
-
-% function c = robot_cost(x, u, i)
-%     global xd
-%     % cost function for robot problem
-%     % sum of 3 terms:
-%     % lu: quadratic cost on controls
-%     % lf: final cost on distance from target parking configuration
-%     % lx: running cost on distance from origin to encourage tight turns
-% 
-%     final = isnan(u(1,:));
-%     u(:,final)  = 0;
-% 
-%     cu  = 5e-3 * [ones(1,7)];                        % control cost coefficients
-% 
-% 
-%     cf  = 0*5e-1 * [0.0*ones(1,7) 0.0*ones(1,7) 1 1 10];         % final cost coefficients
-%     pf  = 0*4e-1 * [0.0*ones(1,7) 0.0*ones(1,7) .01 .01 .1]';    % smoothness scales for final cost
-% 
-%     cx  = 5e-1 * [0.0*ones(1,7) 0.1*ones(1,7)  0 0 10];        % running cost coefficients
-%     px  = 4e-1 * [0.0*ones(1,7) 0.01.*ones(1,7) .0 .00 .1]';           % smoothness scales for running cost
-% 
-%     cx_b = 1e2 * [10 10 0];
-%     px_b = 1e2 * [10 10 0]';
-%     
-%     % control cost
-%     lu  = cu * u.^2;
-% 
-%     x_d = repmat(xd(:,i), 1,size(x,2)/numel(i));
-%     
-%     % final cost
-%     if any(final)
-%        % fk       = fkine(rb, x(1:2,final));
-%        % llf      = cf * sabs(fk(:,end),pf);
-%        llf      = cf * sabs(x(:,final)-x_d(:,final),pf);
-%        lf       = double(final);
-%        lf(final)= llf;
-%     else
-%        lf    = 0;
-%     end
-% 
-%     lx    = cx * sabs(x(:,:) - x_d, px);
-%     
-%     % total cost
-%     c     = lu + lx + lf;
 
 
 function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar)
@@ -202,14 +160,13 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     cen = repmat(cen_, 1, size(x,2)/numel(i));
     
     
-    cu  = 5e-10*ones(1,7);         % control cost coefficients
+    cu  = [5e-10 * ones(1, 7) 0.1];         % control cost coefficients
 
-    cf  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05];        % final cost coefficients
-    pf  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05]';    % smoothness scales for final cost
+    cf  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 1];        % final cost coefficients
+    pf  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 1]';    % smoothness scales for final cost
 
-    cx  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05];           % running cost coefficients
-    px  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05]';     % smoothness scales for running cost
-    cv  = 5e-5*ones(1,7);
+    cx  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 1];           % running cost coefficients
+    px  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 1]';     % smoothness scales for running cost
     % control cost
 
     lu    = cu * u.^2 + (rhao(2)/2) * ones(1,m) * (u-u_bar).^2;
@@ -255,8 +212,8 @@ if nargout == 2
     c = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar);
 else
     % state and control indices
-    ix = 1:17;
-    iu = 18:24;
+    ix = 1:18;
+    iu = 19:26;
     % dynamics first derivatives
     xu_dyn  = @(xu) robot_dynamics(xu(ix,:),xu(iu,:),i);
     J       = finite_difference(xu_dyn, [x; u]);
