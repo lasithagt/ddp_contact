@@ -50,13 +50,13 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [1, 1e-2, 1e-2, 0, 1];
+rhao   = [1, 1e-2, 10e-1, 0, 1];
 
 
 alpha  = 1.5;
 alphak = 1;
 yita   = 0.999;
-admmMaxIter  = 5;
+admmMaxIter  = 20;
 
 %%%%%%% Primal variables
 % ddp primal
@@ -385,6 +385,8 @@ hold off
 
 [~,~,costnew]  = traj_sim(x0,unew,DYNCST,zeros(1,5),x_init,c_init,u_init,zeros(7,N+1),zeros(7,N+1));
 
+
+
 %% ====== STEP 5: accept step (or not), expand or shrink trust region
 % print headings
 if verbosity >= 1 && last_head == print_head
@@ -405,6 +407,8 @@ end
 u              = unew;
 x              = xnew;
 cost           = costnew;
+save('test_data/consensus_admm_dyn_time.mat','x','u','costcomp','res_x','res_u','res_c','res_q')
+
 % Op.plotFn(x);
    
     % update trace
