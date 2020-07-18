@@ -165,7 +165,7 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     cf  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1];        % final cost coefficients
     pf  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1]';    % smoothness scales for final cost
 
-    cx  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1];           % running cost coefficients
+    cx  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000001 0.00001 0.05 0.1];           % running cost coefficients
     px  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1]';     % smoothness scales for running cost
     % control cost
 
