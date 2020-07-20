@@ -26,7 +26,7 @@ Op.maxIter = 10;
 global x_des
 %% desired path to track
 t    = linspace(0, 2*pi, T+1);
-r    = 0.06;
+r    = 0.08;
 xd_x = r * cos(t);
 xd_y = r * sin(3*t);
 xd_z = (0.8) * ones(1,numel(t));
