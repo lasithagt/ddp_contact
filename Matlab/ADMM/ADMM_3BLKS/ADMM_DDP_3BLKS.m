@@ -50,7 +50,7 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-rhao   = [1e-2, 1e-2, 1e-1, 0, 1];
+rhao   = [1, 1e-1, 1e-3, 0, 1];
 
 
 alpha  = 1.5;
@@ -138,7 +138,7 @@ for i = 1:admmMaxIter
             J         = Jac_kuka(xnew(1:7, j)); % jacobian at the base of the manipulator
             x_dot     = J * xnew(8:14, j);
             cnew(1,j) = 0.3 * sum(x_dot(1:3).^2, 1) ./ RC(j);
-            cnew(2,j) = xnew(end-1,j); 
+            cnew(2,j) = xnew(17,j); 
         end
         
         % ====== ik block ====== %

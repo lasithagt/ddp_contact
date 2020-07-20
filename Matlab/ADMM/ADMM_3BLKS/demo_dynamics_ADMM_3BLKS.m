@@ -17,9 +17,9 @@ T        = 200;              % horizon
 % u0      = -0.1 + zeros(6,T);     % initial controls
 
 Op.lims  = [0 2 * pi; 
-            -4 4;       
+            -0.5 0.5;       
             -10 10;     
-             -5  5];  
+             -2  2];  
 Op.plot    = 1;           % plot the derivatives as well
 Op.maxIter = 10;
 
@@ -154,7 +154,7 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
         J         = Jac_kuka(x(1:7, j)); % jacobian at the base of the manipulator
         x_dot     = J * x(8:14, j);
         cen_(1,j) = 0.3 * sum(x_dot(1:3).^2, 1) ./ RC(j);
-        cen_(2,j) = x(end, j);
+        cen_(2,j) = x(17, j);
     end
     
     cen = repmat(cen_, 1, size(x,2)/numel(i));
@@ -165,7 +165,7 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     cf  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1];        % final cost coefficients
     pf  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1]';    % smoothness scales for final cost
 
-    cx  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000001 0.00001 0.05 0.1];           % running cost coefficients
+    cx  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000001 0.00001 0.05 4];           % running cost coefficients
     px  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1]';     % smoothness scales for running cost
     % control cost
 
