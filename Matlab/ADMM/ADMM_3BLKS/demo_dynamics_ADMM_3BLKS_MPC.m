@@ -101,10 +101,10 @@ x_d      = [q_des; zeros(7,numel(t)); zeros(2,numel(t)) ;xd_f; dt_dyn];
 %% === run the optimization! - Model Predictive Control ===
 
 % mpc parameters
-admmMaxIter  = 2;
+admmMaxIter  = 3;
 horizon      = 0.3;
-time_steps_h = 15;
-mpc_interval = 10;
+time_steps_h = 20;
+mpc_interval = 8;
 
 x_new = x0;
 u = u0(:, 1:time_steps_h-1);

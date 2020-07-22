@@ -46,7 +46,7 @@ last_head   = print_head;
 verbosity   = 1;
 
 if verbosity > 0
-    fprintf('\n =========== begin ADMM Three Block =========== \n');
+    fprintf('\n =========== begin ADMM Three Block MPC =========== \n');
 end
 
 %%%%%%% Initialize dual variebles
