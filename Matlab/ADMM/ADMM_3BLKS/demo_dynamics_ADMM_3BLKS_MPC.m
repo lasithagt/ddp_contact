@@ -1,4 +1,4 @@
-function [x,u] = demo_dynamics_ADMM_3BLKS
+function [x,u] = demo_dynamics_ADMM_3BLKS_MPC
 % A demo for Alternating Direction Method of Multiplier implemented on a
 % car-parking problem
 clc
@@ -10,7 +10,7 @@ tool = [0 0 0.136]';
 
 full_DDP = false;
 % set up the optimization problem
-DYNCST          = @(x,u,rhao,x_bar,c_bar,u_bar,thetalist_bar,thetalistd_bar,i) robot_dyn_cst(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar, full_DDP);
+DYNCST          = @(x, u, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar, i) robot_dyn_cst(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar, thetalistd_bar, full_DDP);
 
 T        = 200;              % horizon 
 % x0      = [0 0.2 -0.1 0 0 0 0 0 0 0 0 0 0 0 0.1]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
@@ -20,8 +20,8 @@ Op.lims  = [0 2 * pi;
             -0.5 0.5;       
             -10 10;     
              -2  2];  
-Op.plot    = 1;           % plot the derivatives as well
-Op.maxIter = 10;
+Op.plot    = 0;           % plot the derivatives as well
+Op.maxIter = 6;
 
 global x_des
 %% desired path to track
@@ -42,7 +42,7 @@ x_des = [xd_x; xd_y; xd_z; Rd_r; Rd_p; Rd_y];
 
 
 % calculate the center of curvature.
-global RC K
+global RC K RC_full K_full
 [~,RC,K] = curvature([xd_x', xd_y', xd_z']); % column vectors
 RC(1) = RC(2);
 RC(end) = RC(end);
@@ -53,6 +53,8 @@ K = K';
 RC(isnan(RC)) = 1e10;
 K(isnan(K))   = 0;
 
+RC_full = RC;
+K_full  = K;
 
 % desired paths (motin profile an force profile)
 global xd Slist M_ inertial_params
@@ -87,29 +89,114 @@ else
 end
 n        = 18;
 m        = 8;
-x0       = [q0' zeros(1,7) 0 0 0 0.02]';   % states = [position_p, position_w,  velocity_p, velocity_w, force]
-u0       = -0. + zeros(m, T);                                                     % initial controls
+x0       = [q0' zeros(1,7) 0 0 0 0.02]';   
+u0       = -0. + zeros(m, T);                                                   
 
 u0 (3,1) = 0;
 q_des    = repmat(q0, 1, numel(t));
 dt_dyn   = 0.02 * ones(1, numel(t)); 
-xd       = [q_des; zeros(7,numel(t)); zeros(2,numel(t)) ;xd_f; dt_dyn];
- 
+x_d      = [q_des; zeros(7,numel(t)); zeros(2,numel(t)) ;xd_f; dt_dyn];
 
-%% For testing IK
-% q_bar  = zeros(7, size(x_des,2));
-% qd_bar = zeros(7, size(x_des,2));
-% 
-% [theta0, ~, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], q_bar, qd_bar, 0);
-% 
-% u0       = -G_kuka(inertial_params, theta0)'; 
 
-%% === run the optimization! ===
-[x,u]= ADMM_DDP_3BLKS(DYNCST, x0, u0, Op);
+%% === run the optimization! - Model Predictive Control ===
+
+% mpc parameters
+admmMaxIter  = 2;
+horizon      = 0.3;
+time_steps_h = 20;
+mpc_interval = 10;
+
+x_new = x0;
+u = u0(:, 1:time_steps_h-1);
+
+% save state data
+x_mpc_actual(:,1)  = x0;
+x_mpc_predict(:,1) = x0;
+j = 0;
+
+% run mpc optmization
+for i = 1:mpc_interval:T-time_steps_h+1
+    
+    j = j + 1;
+    fprintf('MPC iteration:  %d of %d\n', j, numel(1:mpc_interval:T-time_steps_h+1))
+    close all
+    
+    % initial conditions, warm-start
+    u0_mpc = u0(:, i:i+time_steps_h-2);
+    u0_mpc(:,1) = u(:,end);
+    
+    % horizon
+    track_horizon = i:i+time_steps_h-1;
+    x_des_horizon = x_des(:, track_horizon);
+    xd            = x_d(:, track_horizon);
+
+    % run admm for the current iteration
+    [x, u] = ADMM_DDP_3BLKS(DYNCST, x0, u0_mpc, Op, x_des_horizon, admmMaxIter, false);
+
+
+    % apply to the plant, get the current state
+    x_new = plant(x(:,1), u);
+    
+    x0 = x_new(:, mpc_interval);
+    
+    % store mpc data
+    x_mpc_actual(:, i:i+time_steps_h-1)  = x_new;
+    x_mpc_predict(:, i:i+time_steps_h-1) = x;
+    
+    % plot data
+    [x_a, y_a, z_a] = convert_q2x(x_mpc_actual, false);
+    [x_p, y_p, z_p] = convert_q2x(x_mpc_predict, false);
+
+    figure(1)
+    plot3(x_a, y_a, z_a, 'r-', 'LineWidth', 2)
+    hold on 
+    plot3(x_p, y_p, z_p, 'b-', 'LineWidth', 2)
+    legend('Actual', 'Predicted')
+    hold off
+
+end
+
+% plot data
+[x_a, y_a, z_a] = convert_q2x(x_mpc_actual);
+[x_p, y_p, z_p] = convert_q2x(x_mpc_predict);
+
+figure(2)
+plot3(x_a, y_a, z_a, 'r-', 'LineWidth', 2)
+hold on 
+plot3(x_p, y_p, z_p, 'b-', 'LineWidth', 2)
+legend('Actual', 'Predicted')
+hold off
+
+% simulates the plant with input noise
+function x_ = plant(x0, u)
+    global RC K
+    
+    % === states and controls === %
+    final = isnan(u(1,:));
+    u(:,final)  = 0;
+
+    % constants
+    dt  = 0.02;     % h = timestep (seconds)
+
+    
+    % inject noise through control
+    u_n = u + 0.05 * (2 * rand(size(u))-1);
+    x_(:,1) = x0;
+    
+    for k = 1:size(u,2)
+        % states - velocity
+        xd  = x_(8:14, k);
+        
+        xdd = fdyn_dynamics_admm_3blk(x_(:,k), u_n(:,k), RC(k), K(:, k));
+
+        % modify here
+        dy     = [xd; xdd(1:end,:)];     % change in state
+
+        %     dt_dyn = x(end,:) + dy(end,:);
+        x_(:,k+1) = x_(:,k) +  x_(end,k) .* dy;   % new state
+    end
 
 % animate the resulting trajectory
-
-
 function y = robot_dynamics(x, u, i)
     global RC K
     % === states and controls:
@@ -159,7 +246,6 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     
     cen = repmat(cen_, 1, size(x,2)/numel(i));
     
-    
     cu  = [5e-10 * ones(1, 7) 0.2];         % control cost coefficients
 
     cf  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1];        % final cost coefficients
@@ -167,17 +253,17 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
 
     cx  = 5e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000001 0.00001 0.05 4];           % running cost coefficients
     px  = 4e-1 * [0.0*ones(1,7) 0.0001*ones(1,7) 0.000000 0.00000 0.05 0.1]';     % smoothness scales for running cost
+   
     % control cost
-
     lu    = cu * u.^2 + (rhao(2)/2) * ones(1,m) * (u-u_bar).^2;
 
-    x_d = repmat(xd(:,i), 1, size(x,2)/numel(i));
+    x_d   = repmat(xd(:,i), 1, size(x,2)/numel(i));
     
     % final cost
     if any(final)
-%        llf      = cx(15:17) * (x(15:17,final)-x_d(15:17,final)).^2 + (rhao(1)/2)*ones(1,7)*(x(1:7,final)-x_bar(1:7,final)).^2 + ...
-%                   (rhao(3)/2)*(cen(final)-c_bar(final)).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,final)-thetalist_bar(:,final)).^2 + ...
-%                   (rhao(4)/2) * ones(1,7)*(x(8:14,final)-thetalistd_bar(:,final)).^2; 
+    %        llf      = cx(15:17) * (x(15:17,final)-x_d(15:17,final)).^2 + (rhao(1)/2)*ones(1,7)*(x(1:7,final)-x_bar(1:7,final)).^2 + ...
+    %                   (rhao(3)/2)*(cen(final)-c_bar(final)).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,final)-thetalist_bar(:,final)).^2 + ...
+    %                   (rhao(4)/2) * ones(1,7)*(x(8:14,final)-thetalistd_bar(:,final)).^2; 
        llf      = 0;
        lf       = double(final);
        lf(final)= llf;
@@ -185,7 +271,6 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
        lf    = 0;
     end
 
-%     cx(15:17) * sum((x(15:17,:)-x_d(15:17,:)).^2,2);
     % running cost
     lx     = cx(18) * (x(18,:)-x_d(18,:)).^2 + cx(15:17) * (x(15:17,:)-x_d(15:17,:)).^2 + (rhao(1)/2)*ones(1,7)*(x(1:7,:)-x_bar(1:7,:)).^2 + ...
         (rhao(3)/2)*ones(1,2)*(cen-c_bar).^2 + (rhao(5)/2) * ones(1,7)*(x(1:7,:)-thetalist_bar).^2 + ...
@@ -195,12 +280,6 @@ function [c] = admm_robot_cost(x, u, i, rhao, x_bar, c_bar, u_bar, thetalist_bar
     % total cost
     c     = lu + lx + lf; 
 
-
-
-% utility functions
-function y = sabs(x,p)
-% smooth absolute-value function (a.k.a pseudo-Huber)
-y = pp( sqrt(pp(x.^2,p.^2)), -p);
 
 
 
