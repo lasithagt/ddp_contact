@@ -104,7 +104,7 @@ x_d      = [q_des; zeros(7,numel(t)); zeros(2,numel(t)) ;xd_f; dt_dyn];
 admmMaxIter  = 2;
 horizon      = 0.3;
 time_steps_h = 15;
-mpc_interval = 3;
+mpc_interval = 10;
 
 x_new = x0;
 u = u0(:, 1:time_steps_h-1);
@@ -181,7 +181,7 @@ function x_ = plant(x0, u)
 
     
     % inject noise through control
-    u_n = u + 0.05 * (2 * rand(size(u))-1);
+    u_n = u + 0.1 * (2 * rand(size(u))-1);
     x_(:,1) = x0;
     
     for k = 1:size(u,2)

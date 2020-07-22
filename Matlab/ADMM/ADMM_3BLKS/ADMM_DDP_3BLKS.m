@@ -172,7 +172,10 @@ for i = 1:admmMaxIter
     res_x(:,i) = norm(qnew - x_bar);
     res_c(:,i) = norm(cnew - c_bar);
     res_q(:,i) = norm(thetalist - x_bar(1:7,:));
-%     res_q(:,i) = norm(xnew(1:7,:) - thetalist);
+    
+    fprintf('\n Constraint Residuals: state: %d, control: %d, contact: %d \n', res_x(:,i), res_u(:,i), res_c(:,i));
+    
+    %     res_q(:,i) = norm(xnew(1:7,:) - thetalist);
     res_qd(:,i) = norm(xnew(8:14,:) - thetalistd);
     res_q_consensus(:,i) = norm(thetalist - qnew);
     
