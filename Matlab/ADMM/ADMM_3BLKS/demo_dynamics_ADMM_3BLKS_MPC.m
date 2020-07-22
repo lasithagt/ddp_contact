@@ -103,8 +103,8 @@ x_d      = [q_des; zeros(7,numel(t)); zeros(2,numel(t)) ;xd_f; dt_dyn];
 % mpc parameters
 admmMaxIter  = 2;
 horizon      = 0.3;
-time_steps_h = 20;
-mpc_interval = 10;
+time_steps_h = 15;
+mpc_interval = 3;
 
 x_new = x0;
 u = u0(:, 1:time_steps_h-1);
@@ -137,11 +137,11 @@ for i = 1:mpc_interval:T-time_steps_h+1
     % apply to the plant, get the current state
     x_new = plant(x(:,1), u);
     
-    x0 = x_new(:, mpc_interval);
+    x0 = x_new(:, mpc_interval+1);
     
     % store mpc data
-    x_mpc_actual(:, i:i+time_steps_h-1)  = x_new;
-    x_mpc_predict(:, i:i+time_steps_h-1) = x;
+    x_mpc_actual(:, i:i+mpc_interval-1)  = x_new(:, 1:mpc_interval);
+    x_mpc_predict(:, i:i+mpc_interval-1) = x(:, 1:mpc_interval);
     
     % plot data
     [x_a, y_a, z_a] = convert_q2x(x_mpc_actual, false);
@@ -151,6 +151,7 @@ for i = 1:mpc_interval:T-time_steps_h+1
     plot3(x_a, y_a, z_a, 'r-', 'LineWidth', 2)
     hold on 
     plot3(x_p, y_p, z_p, 'b-', 'LineWidth', 2)
+    
     legend('Actual', 'Predicted')
     hold off
 
