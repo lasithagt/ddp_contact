@@ -28,6 +28,9 @@ find_package(OROCOS_KDL)
 if (OROCOS_KDL)
 endif()
 
+
+
+
 # set(OROCOS_KDL_INCLUDE_DIR ${OROCOS_KDL_INCLUDE_DIR})
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -67,6 +70,18 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 
+add_library(ModernRoboticsCpp STATIC ../ModernRobotics/src/modern_robotics.cpp)
+target_include_directories(ModernRoboticsCpp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobotics/include/)
+
+install (TARGETS ModernRoboticsCpp
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin)
+
+add_library(ik-solvers STATIC ./src/IK_solver.cpp ./include/IK_solver.hpp ./include/IKTrajectory.hpp)
+target_include_directories(ik-solvers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobotics/include/)
+target_link_libraries(ik-solvers ModernRoboticsCpp)
+
 #######################################################################################
 
 
@@ -88,3 +103,14 @@ target_link_libraries(ddp-optim orocos-kdl ddp-solver kuka-models)
 add_executable(mpc-optim src/mpc_main.cpp)
 target_include_directories(mpc-optim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(mpc-optim orocos-kdl ddp-solver kuka-models)
+
+add_executable(ik-test src/ik_test.cpp)
+target_include_directories(ik-test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobotics/include/ ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(ik-test ModernRoboticsCpp ik-solvers)
+
+#set(LIB_TEST_SOURCES
+#  ${CMAKE_CURRENT_SOURCE_DIR}/src/IK_solver.cpp
+#)
+
+#add_executable(l ${LIB_TEST_SOURCES})
+#target_link_libraries(lib_test ModernRoboticsCpp)
