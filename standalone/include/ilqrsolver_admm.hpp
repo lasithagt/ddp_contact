@@ -5,8 +5,7 @@
 
 #include "config.h"
 #include "kuka_arm.h"
-// #include "cost_function_kuka_arm.h"
-#include "cost_function.h"
+#include "cost_function_kuka_arm.h"
 #include "SoftContactModel.h"
 
 #include <numeric>
@@ -90,7 +89,7 @@ public:
 
 private:
     KukaArm* dynamicModel;
-    CostFunction* costFunction;
+    CostFunctionKukaArm* costFunction;
     unsigned int stateNb;
     unsigned int commandNb;
 
@@ -153,7 +152,7 @@ private:
     bool isUNan;
 
 public:
-    ILQRSolver(KukaArm& DynamicModel, CostFunction& Cost, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox);
+    ILQRSolver(KukaArm& DynamicModel, CostFunctionKukaArm& CostFunction, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox);
     void solve(const stateVec_t& x_0, const commandVecTab_t& u_0);
     void initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0);
     struct traj getLastSolvedTrajectory();

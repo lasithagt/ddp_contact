@@ -7,7 +7,7 @@
 #include <math.h>
 
 #include "config.h"
-#include "KukaModel.h"
+// #include "KukaModel.h"
 #include "models.h"
 #include "eigenmvn.hpp"
 #include "kuka_arm.h"

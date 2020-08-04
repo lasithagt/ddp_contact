@@ -10,7 +10,7 @@ using Eigen::VectorXd;
 
 namespace optimizer {
 
-ILQRSolver::ILQRSolver(KukaArm& iiwaDynamicModel, CostFunction& iiwaCostFunction, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox) : 
+ILQRSolver::ILQRSolver(KukaArm& iiwaDynamicModel, CostFunctionKukaArm& iiwaCostFunction, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox) : 
         N(time_steps), dt(dt_), Op(solverOptions)
 {
     // TRACE("initialize dynamic model and cost function\n");

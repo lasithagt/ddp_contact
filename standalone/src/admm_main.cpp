@@ -3,7 +3,7 @@
 #include <Eigen/Dense>
 
 
-#include "ddp.h"
+#include "admm.h"
 
 /* ------------- Eigen print arguments ------------------- */
   Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "]");
@@ -12,7 +12,7 @@
 int main(int argc, char *argv[]) 
 {
  
-  DDP optimizer;
+  ADMM optimizer;
   stateVec_t xinit, xgoal;
   stateVecTab_t xtrack;
   xtrack.resize(stateSize, NumberofKnotPt + 1);

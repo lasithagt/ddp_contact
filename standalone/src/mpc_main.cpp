@@ -175,7 +175,7 @@ public:
         KukaArm KukaArmModel(dt, N, kukaRobot, contactModel);
 
         // cost function 
-        CostFunctionKukaArm costKukaArm(xgoal, xtrack);
+        CostFunction costKukaArm(xgoal, xtrack);
 
         /* -------------------- Optimizer Params ------------------------ */
         optimizer::ILQRSolver::OptSet solverOptions;
@@ -217,7 +217,7 @@ public:
 
 
 
-        ModelPredictiveController<KukaArm, Plant, CostFunctionKukaArm, Optimizer, Result> mpc(dt, N, 10, verbose, logger, KukaArmModel, costKukaArm, solver, xtrack) ;
+        ModelPredictiveController<KukaArm, Plant, CostFunction, Optimizer, Result> mpc(dt, N, 10, verbose, logger, KukaArmModel, costKukaArm, solver, xtrack) ;
 
         // termination condition
         using StateRef = Eigen::Ref<const stateVec_t>;

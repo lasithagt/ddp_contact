@@ -22,19 +22,37 @@ CostFunctionKukaArm::CostFunctionKukaArm(const stateVec_t &x_goal, const stateVe
         fk_pos_scale = 0;
         fk_orien_scale = 0;
 
-        // torque cost
-        // l = sigma(xQx+uRu) + xfQfxf
-        QDiagElementVec << pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100,  
-                            vel_scale*10, vel_scale*10, vel_scale*10, vel_scale*10, vel_scale*10, vel_scale*10, vel_scale*10, force_scale_x, force_scale_y, force_scale_z;
-        QfDiagElementVec << pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0,
-                            vel_f_scale*100.0, vel_f_scale*100.0, vel_f_scale*100.0, vel_f_scale*100.0, vel_f_scale*100.0, vel_f_scale*100.0, vel_f_scale*100.0, force_f_scale_x, force_f_scale_y, force_f_scale_z;
-        RDiagElementVec << torqoe_scale*0.005, torqoe_scale*0.005, torqoe_scale*0.007, torqoe_scale*0.007, torqoe_scale*0.02, torqoe_scale*0.02, torqoe_scale*0.05;
-        TDiagElementVec << fk_pos_scale*1000, fk_pos_scale*1000, fk_pos_scale*1000, fk_orien_scale*1000, fk_orien_scale*1000, fk_orien_scale*1000;
+        // QDiagElementVec << pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100, pos_scale*100,  
+        //                     vel_scale*10, vel_scale*10, vel_scale*10, vel_scale*10, vel_scale*10, vel_scale*10, vel_scale*10, force_scale_x, force_scale_y, force_scale_z;
+        // QfDiagElementVec << pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0, pos_f_scale*1000.0,
+        //                     vel_f_scale*100.0, vel_f_scale*100.0, vel_f_scale*100.0, vel_f_scale*100.0, vel_f_scale*100.0, vel_f_scale*100.0, vel_f_scale*100.0, force_f_scale_x, force_f_scale_y, force_f_scale_z;
+        // RDiagElementVec << torqoe_scale*0.005, torqoe_scale*0.005, torqoe_scale*0.007, torqoe_scale*0.007, torqoe_scale*0.02, torqoe_scale*0.02, torqoe_scale*0.05;
+        // TDiagElementVec << fk_pos_scale*1000, fk_pos_scale*1000, fk_pos_scale*1000, fk_orien_scale*1000, fk_orien_scale*1000, fk_orien_scale*1000;
         
-        Q = QDiagElementVec.asDiagonal();
-        Qf = QfDiagElementVec.asDiagonal();
-        R = RDiagElementVec.asDiagonal();
-        T = TDiagElementVec.asDiagonal();
+
+
+        Eigen::VectorXd x_w(stateSize);
+        Eigen::VectorXd xf_w(stateSize);
+        Eigen::VectorXd u_w(commandSize);
+
+        x_w << 1000, 1000, 1000, 1000, 1000, 1000, 1000, 100, 100, 100, 100, 100, 100, 100, 0, 0, 0;
+        xf_w << 100000, 100000, 100000, 100000, 100000, 100000, 100000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 0, 0, 0;
+        u_w << 0.005, 0.005, 0.007, 0.007, 0.02, 0.02, 0.05;
+
+
+        QDiagElementVec  << x_w;
+        QfDiagElementVec << x_w; 
+        RDiagElementVec  << u_w;
+        
+        Q  = x_w.asDiagonal();
+        Qf = x_w.asDiagonal();
+        R  = u_w.asDiagonal();
+
+
+        // Q = QDiagElementVec.asDiagonal();
+        // Qf = QfDiagElementVec.asDiagonal();
+        // R = RDiagElementVec.asDiagonal();
+        // T = TDiagElementVec.asDiagonal();
     }
     else
     {
@@ -74,60 +92,6 @@ CostFunctionKukaArm::CostFunctionKukaArm(const stateVec_t &x_goal, const stateVe
     cuu_new.resize(N+1);
 }
 
-
-scalar_t CostFunctionKukaArm::forwardkin_cost(stateVec_t x, commandVec_t u, Eigen::Matrix<double,6,1> fkgoal, unsigned int last)
-{
-    // forward dynamics here xList_curr is a vector of states
-    if (SOFT_CONTACT)
-    {
-        // ---------------------------------------------------------------------------
-        // Eigen::VectorXd qq = Eigen::VectorXd((stateSize-3)/2+2);
-        // Eigen::VectorXd qqd = Eigen::VectorXd((stateSize-3)/2+2);
-        // qq.setZero();
-        // qqd.setZero();
-        // qq.topRows((stateSize-3)/2) = x.head((stateSize-3)/2);
-        // qqd.topRows((stateSize-3)/2) = x.segment((stateSize-3)/2, (stateSize-3)/2);    
-
-        // /*---------------------------------------*/
-        // Eigen::Matrix<double,3,3> poseM;
-        // Eigen::Vector3d poseP;
-        // Eigen::Vector3d vel;
-        // Eigen::Vector3d accel;
-
-        // kukaRobot_->getForwardKinematics(qq.data(), qqd.data(), qdd.data(), poseM, poseP, vel, accel, false);
-
-        // // ----------------------------------------------------
-
-        // Eigen::Matrix3d m;
-        // m = Eigen::AngleAxisd(poseM);
-        // Eigen::Vector3d ea = m.eulerAngles(2, 1, 0); 
-
-        // Eigen::Matrix<double, 6, 1> fk_current;
-        // fk_current << poseP(0), poseP(1), poseP(2), ea(0), ea(1), ea(2);
-
-        // // cout << "fk_cur " << fk_cur.transpose() << " fkgoal " << fkgoal.transpose() << endl;
-        // // if last element, only add state cost
-
-        // scalar_t c_mat_to_scalar;
-
-        // if (last == 1)
-        // {
-        //     c_mat_to_scalar = 0.5 * (fk_current.transpose() - fkgoal.transpose()) * costFunction->getT() * (fk_current - fkgoal);
-        // }
-        // else 
-        // {
-        //     c_mat_to_scalar = 0.5 * u.transpose() * costFunction->getR() * u;        
-        // }
-
-        // std::cout << "in this function" << std::endl;
-
-        scalar_t c_mat_to_scalar;
-        // c_mat_to_scalar.setZero();
-
-        return c_mat_to_scalar;
-    }
-
-}
 
 scalar_t CostFunctionKukaArm::cost_func_expre(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k)
 {

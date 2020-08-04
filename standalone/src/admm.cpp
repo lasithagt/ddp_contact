@@ -1,33 +1,20 @@
-/// @file
-///
-/// kuka_plan_runner is designed to wait for LCM messages contraining
-/// a robot_plan_t message, and then execute the plan on an iiwa arm
-/// (also communicating via LCM using the
-/// lcmt_iiwa_command/lcmt_iiwa_status messages).
-///
-/// When a plan is received, it will immediately begin executing that
-/// plan on the arm (replacing any plan in progress).
-///
-/// If a stop message is received, it will immediately discard the
-/// current plan and wait until a new plan is received.
 
 #include <iostream>
 #include <memory>
 
-/* DDP trajectory generation */
-
-#include "ddp.h"
+/* ADMM trajectory generation */
+#include "admm.hpp"
 
 using namespace std;
 using namespace Eigen;
 
-DDP::DDP()
+ADMM::ADMM()
 {
 
 }
 
 /* -------------------- Soft_contact_state = 17(14+3) ------------------------*/
-void DDP::run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack) 
+void ADMM::run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack, const stateVec_t& cList_bar, const stateVec_t& xList_bar, const stateVec_t& uList_bar) 
 {
     struct timeval tbegin,tend;
     double texec = 0.0;
@@ -151,7 +138,7 @@ void DDP::run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
     KukaArm KukaArmModel(dt, N, kukaRobot, contactModel);
 
     // cost function 
-    CostFunction costKukaArm(xgoal, xtrack);
+    CostFunctionKukaArm costKukaArm(xgoal, xtrack);
 
 
     /* -------------------- Optimizer Params ------------------------ */
@@ -230,9 +217,4 @@ void DDP::run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
     cout << "-------- DDP Trajectory Generation Finished! --------" << endl;
 
 }
-
-
-
-
-
 

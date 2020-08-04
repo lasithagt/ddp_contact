@@ -49,7 +49,7 @@ public:
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
     CostFunctionKukaArm(const stateVec_t &x_goal, const stateVecTab_t &x_track);
-    scalar_t forwardkin_cost(stateVec_t x, commandVec_t u, Eigen::Matrix<double,6,1> fkgoal, unsigned int last);
+    // scalar_t forwardkin_cost(stateVec_t x, commandVec_t u, Eigen::Matrix<double,6,1> fkgoal, unsigned int last);
     scalar_t cost_func_expre(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k);
 
 	stateVec_t finite_diff_cx(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k);

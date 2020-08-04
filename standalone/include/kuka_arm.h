@@ -1,9 +1,9 @@
-
+    
 #ifndef KUKAARM_H
 #define KUKAARM_H
 
 #include "config.h"
-#include "cost_function_kuka_arm.h"
+// #include "cost_function_kuka_arm.h"
 #include "SoftContactModel.h"
 
 #include "KukaModel.h"
