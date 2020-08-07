@@ -1,7 +1,8 @@
 #include <iostream>
 #include <memory>
 #include <Eigen/Dense>
-
+#include <chrono>
+#include <ctime>
 
 #include "admm.hpp"
 
@@ -34,6 +35,7 @@ int main(int argc, char *argv[])
   /* ---------------------------------- Define the robot and contact model ---------------------------------- */
   KDL::Chain robot = KDL::KukaDHKdl();
   std::shared_ptr<KUKAModelKDL> kukaRobot = std::shared_ptr<KUKAModelKDL>(new KUKAModelKDL(robot, robotParams));
+
 
 
   ContactModel::ContactParams cp_;
@@ -112,10 +114,58 @@ int main(int argc, char *argv[])
   R << 1, 0, 0, 0, 1, 0, 0, 0, 1;
   double Tf = 2 * M_PI;
 
+
+  Eigen::Vector3d accel(0,0,0);
+  Eigen::Vector3d vel(0,0,0);
+  Eigen::Vector3d poseP(0,0,0);
+  Eigen::Matrix<double,3,3> poseM;
+  Eigen::VectorXd q(7);
+  // double* q = new double(7);
+  q.setZero();
+  q(0) = M_PI/4;
+  q(1) = M_PI/4;
+  q(2) = -M_PI/4;
+  q(3) = M_PI/4;
+  q(4) = M_PI/4;
+  q(5) = -M_PI/4;
+  q(6) = M_PI/4;
+  // for (int i = 0;i < 7; i++) {
+  //   q[i] = 0;
+  // }
+  using namespace std::chrono;
+
+  double* qd = new double(7);
+  double* qdd = new double(7);
+  high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
+  kukaRobot->getForwardKinematics(q.data(), qd, qdd, poseM, poseP, vel, accel, false);
+  high_resolution_clock::time_point t2 = high_resolution_clock::now();
+  duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+
+  std::cout << "It took me " << time_span.count() << " seconds.";
+  // delete q;
+  delete qd;
+  delete qdd;
+
+  t1 = high_resolution_clock::now();
+
+  mr::FKinSpace(M, Slist, q);
+  t2 = high_resolution_clock::now();
+
+  time_span = duration_cast<duration<double>>(t2 - t1);
+  std::cout << "It took me " << time_span.count() << " seconds.";
+  std::cout << std::endl;
+
+  std::cout << mr::RpToTrans(poseM.transpose(), poseP) << std::endl;
+  std::cout << mr::FKinSpace(M, Slist, q) << std::endl;
+
+  
+
+
   std::vector<Eigen::MatrixXd> cartesianPoses = IK_traj.generateLissajousTrajectories(R, 0.8, 1, 3, 0.08, 0.08, N, Tf);
 
   /* initialize xinit, xgoal, xtrack - for the hozizon*/
-  optimizerADMM.run(kukaRobot, KukaArmModel, xinit, xgoal, xtrack, cartesianPoses, rho, LIMITS, IK_OPT);
+  // optimizerADMM.run(kukaRobot, KukaArmModel, xinit, xgoal, xtrack, cartesianPoses, rho, LIMITS, IK_OPT);
 
   // TODO : saving data file
 
