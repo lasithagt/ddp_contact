@@ -17,11 +17,11 @@ public:
 		M.resize(4,4);
 
 		Eigen::Vector3d w1(0,0,1);
-		Eigen::Vector3d w2(0,-1,0);
+		Eigen::Vector3d w2(0,1,0);
 		Eigen::Vector3d w3(0,0,1);
-		Eigen::Vector3d w4(0,1,0);
+		Eigen::Vector3d w4(0,-1,0);
 		Eigen::Vector3d w5(0,0,1);
-		Eigen::Vector3d w6(0,-1,0);
+		Eigen::Vector3d w6(0,1,0);
 		Eigen::Vector3d w7(0,0,1);
 
 		Eigen::Vector3d q1(0,0,0.2025+0.1575);
@@ -57,6 +57,18 @@ public:
 
 	void getM(Eigen::MatrixXd* M_) {
 		*(M_) = M;
+	}
+
+
+	// get FK
+	std::vector<Eigen::Matrix3d> getFK(const Eigen::MatrixXd& joint_positions) {
+		std::vector<Eigen::Matrix3d> fk(joint_positions.cols());
+
+		for (int i = 0;i < joint_positions.cols(); i++) {
+			fk.at(i) = mr::FKinSpace(M, Slist, joint_positions.col(i));
+		}
+
+		return fk;
 	}
 
 private:
