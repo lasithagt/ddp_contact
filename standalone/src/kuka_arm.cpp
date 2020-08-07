@@ -2,7 +2,7 @@
 #include <Eigen/Geometry>
 
 
-KukaArm::KukaArm(double& iiwa_dt, unsigned int& iiwa_N, std::unique_ptr<KUKAModelKDL>& kukaRobot, ContactModel::SoftContactModel& contact_model) 
+KukaArm::KukaArm(double& iiwa_dt, unsigned int& iiwa_N, std::shared_ptr<KUKAModelKDL>& kukaRobot, ContactModel::SoftContactModel& contact_model) 
 : diff_([this](const stateVec_t& x, const commandVec_t& u) -> stateVec_t{ return this->kuka_arm_dynamics(x, u); }),
       num_diff_(diff_) 
 {
@@ -55,7 +55,7 @@ KukaArm::KukaArm(double& iiwa_dt, unsigned int& iiwa_N, std::unique_ptr<KUKAMode
 
     if (initial_phase_flag_ == 1)
     {
-        kukaRobot_    = std::move(kukaRobot);      
+        kukaRobot_    = kukaRobot;      
         initial_phase_flag_ = 0;
     }
 }

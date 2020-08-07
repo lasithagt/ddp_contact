@@ -22,21 +22,19 @@ public:
     CostFunctionADMM() = default;
     ~CostFunctionADMM() = default;
 
-    CostFunctionADMM(const stateVec_t &x_goal, const stateVecTab_t &x_track) : x_track_(x_track) {
+    CostFunctionADMM(const stateVec_t &x_goal, const stateVecTab_t &x_track, const Eigen::VectorXd& rho) : x_track_(x_track) {
 
         Eigen::VectorXd x_w(stateSize);
+        Eigen::VectorXd xf_w(stateSize);
         Eigen::VectorXd u_w(commandSize);
 
         x_w << 1000, 1000, 1000, 1000, 1000, 1000, 1000, 100, 100, 100, 100, 100, 100, 100, 0, 0, 0;
-        u_w << 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01;
+        xf_w << 100000, 100000, 100000, 100000, 100000, 100000, 100000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 0, 0, 0;
+        u_w << 0.005, 0.005, 0.007, 0.007, 0.02, 0.02, 0.05;
 
-
-        QDiagElementVec  << q_w;
-        QfDiagElementVec << q_w; 
-        RDiagElementVec  << u_w;
         
-        Q  = q_w.asDiagonal();
-        Qf = q_w.asDiagonal();
+        Q  = x_w.asDiagonal();
+        Qf = xf_w.asDiagonal();
         R  = u_w.asDiagonal();
         
 
@@ -49,9 +47,27 @@ public:
 
     }
 
+    /* return the cost with admm */
+    scalar_t cost_func_expre(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k)
+    {
+        scalar_t cost_;
+        unsigned int Nl = NumberofKnotPt;
+
+        if (index_k == Nl)
+        {
+            cost_ = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Qf * (xList_k - x_track_.col(index_k));
+        }
+        else
+        {
+            cost_ = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Q * (xList_k - x_track_.col(index_k));
+            cost_ += 0.5 * uList_k.transpose() * R * uList_k;
+        }
+        return cost_;
+
+    }
 
     /* return the cost with admm */
-    scalar_t cost_func_expre(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& cList_bar, const stateVec_t& xList_bar, const commandVec_t& uList_bar)
+    scalar_t cost_func_expre_admm(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& cList_bar, const stateVec_t& xList_bar, const commandVec_t& uList_bar)
     {
         scalar_t cost_;
         unsigned int Nl = NumberofKnotPt;
@@ -70,7 +86,7 @@ public:
     }
 
     /* compute derivatives */
-    void computeDerivatives(const stateVecTab_t& xList, const commandVecTab_t& uList)
+    void computeDerivatives(const stateVecTab_t& xList, const commandVecTab_t& uList, const stateVecTab_t& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar)
     {
         // TODO : get the state size from the dynamics class
         unsigned int Nl = xList.cols();
@@ -126,9 +142,9 @@ protected:
 	commandMat_t R;
 	Eigen::Matrix<double,6,6> T;
 
-	stateVec_t QDiagElementVec;
-	stateVec_t QfDiagElementVec;
-	commandVec_t RDiagElementVec;
+	stateVec_t x_w;
+	stateVec_t xf_w;
+	commandVec_t u_w;
 	Eigen::Matrix<double,6,1> TDiagElementVec;
 
 

@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 
   /* initialize xinit, xgoal, xtrack - for the hozizon*/
   KDL::Chain robot = KDL::KukaDHKdl();
-  std::unique_ptr<KUKAModelKDL> kukaRobot = std::unique_ptr<KUKAModelKDL>(new KUKAModelKDL(robot, robotParams));
+  std::shared_ptr<KUKAModelKDL> kukaRobot = std::shared_ptr<KUKAModelKDL>(new KUKAModelKDL(robot, robotParams));
 
   /* initialize xinit, xgoal, xtrack - for the hozizon*/
 	optimizer.run(xinit, xgoal, xtrack);

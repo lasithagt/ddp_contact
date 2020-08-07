@@ -1,5 +1,6 @@
 #include <iostream>
 #include <Eigen/Dense>
+#include <Eigen/Core>
 #include "modern_robotics.h"
 #include "IKTrajectory.hpp"
 #include "IK_solver.hpp"
@@ -7,10 +8,15 @@
 #include <chrono>
 #include <ctime>
 #include <math.h> 
-
+typedef Eigen::Matrix<double, Eigen::Dynamic, 1> newType;
 
 
 int main() {
+
+
+	// random testing
+	newType a(10);
+
 
 	/* Test the manipulator dynamics.
 

@@ -1,4 +1,4 @@
-#include "ilqrsolver.h"
+#include "ilqrsolver_admm.hpp"
 
 /* Debug */
 #include <iostream>
@@ -10,7 +10,7 @@ using Eigen::VectorXd;
 
 namespace optimizer {
 
-ILQRSolver::ILQRSolver(KukaArm& iiwaDynamicModel, CostFunctionKukaArm& iiwaCostFunction, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox) : 
+ILQRSolverADMM::ILQRSolverADMM(KukaArm& iiwaDynamicModel, CostFunctionADMM& iiwaCostFunction, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox) : 
         N(time_steps), dt(dt_), Op(solverOptions)
 {
     // TRACE("initialize dynamic model and cost function\n");
@@ -39,6 +39,7 @@ ILQRSolver::ILQRSolver(KukaArm& iiwaDynamicModel, CostFunctionKukaArm& iiwaCostF
 
     xList.resize(stateSize, N + 1);
     uList.resize(commandSize, N);
+
     uListFull.resize(commandSize, N + 1);
     updatedxList.resize(stateSize, N + 1);
     updateduList.resize(commandSize, N);
@@ -85,7 +86,7 @@ ILQRSolver::ILQRSolver(KukaArm& iiwaDynamicModel, CostFunctionKukaArm& iiwaCostF
 
 }
 
-void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0)
+void ILQRSolverADMM::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const stateVecTab_t& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar)
 {
     //==============
     // Checked!!v
@@ -124,9 +125,8 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0)
             /* -------------- compute fx, fu ---------------------- */
             dynamicModel->compute_dynamics_jacobian(xList, uListFull);
             
-
             /* -------------- compute cx, cu, cxx, cuu ------------ */
-            costFunction->computeDerivatives(xList, uListFull);
+            costFunction->computeDerivatives(xList, uListFull, cList_bar, xList_bar, uList_bar);
 
             gettimeofday(&tend_time_deriv,NULL);
             Op.time_derivative(iter) = (static_cast<double>(1000*(tend_time_deriv.tv_sec-tbegin_time_deriv.tv_sec)+((tend_time_deriv.tv_usec-tbegin_time_deriv.tv_usec)/1000)))/1000.0;
@@ -181,10 +181,10 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0)
             for (int alpha_index = 0; alpha_index < Op.alphaList.size(); alpha_index++)
             {
                 alpha = Op.alphaList[alpha_index];
-                doForwardPass(x_0);
+                doForwardPass(x_0, cList_bar, xList_bar, uList_bar);
                 Op.dcost = accumulate(costList.begin(), costList.end(), 0.0) - accumulate(costListNew.begin(), costListNew.end(), 0.0);
                 Op.expected = -alpha*(dV(0) + alpha*dV(1));
-
+                
 
                 double z;
                 if (Op.expected > 0) 
@@ -206,7 +206,8 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0)
             gettimeofday(&tend_time_fwd,NULL);
             Op.time_forward(iter) = (static_cast<double>(1000*(tend_time_fwd.tv_sec-tbegin_time_fwd.tv_sec)+((tend_time_fwd.tv_usec-tbegin_time_fwd.tv_usec)/1000)))/1000.0;
         }
-        
+                
+
         //====== STEP 4: accept step (or not), draw graphics, print status
         if (Op.debug_level > 1 && Op.last_head == Op.print_head)
         {
@@ -219,7 +220,7 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0)
             // print status
             if (Op.debug_level > 1)
             {
-                if(!debugging_print) printf("%-14d%-12.6g%-15.3g%-15.3g%-19.3g%-17.1f\n", iter+1, accumulate(costList.begin(), costList.end(), 0.0), Op.dcost, Op.expected, Op.g_norm, log10(Op.lambda));
+                if(!debugging_print) printf("%-14d%-12.6g%-15.3g%-15.3g%-19.3g%-17.1f\n", iter + 1, accumulate(costList.begin(), costList.end(), 0.0), Op.dcost, Op.expected, Op.g_norm, log10(Op.lambda));
                 Op.last_head = Op.last_head + 1;
             }
 
@@ -280,7 +281,7 @@ void ILQRSolver::solve(const stateVec_t& x_0, const commandVecTab_t& u_0)
     }
 }
 
-void ILQRSolver::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0)
+void ILQRSolverADMM::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0)
 {
     xList.col(0) = x_0;
     commandVec_t zeroCommand;
@@ -310,9 +311,9 @@ void ILQRSolver::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_
         costList[i]             = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i));
         updatedxList.col(i + 1) = forward_integration(updatedxList.col(i), updateduList.col(i));
     }
+
     // getting final cost, state, input=NaN
     costList[N] = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc);
-
 
     // simplistic divergence test, check for the last time step if it has diverged.
     int diverge_element_flag = 0;
@@ -323,7 +324,6 @@ void ILQRSolver::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_
             diverge_element_flag = 1; // checking the absolute value
         }
     }
-    
     
     initFwdPassDone = 1;
     xList = updatedxList;
@@ -344,7 +344,7 @@ void ILQRSolver::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_
     if(Op.debug_level > 0) {TRACE("\n =========== begin iLQR =========== \n");}
 }
 
-void ILQRSolver::doForwardPass(const stateVec_t& x_0)
+void ILQRSolverADMM::doForwardPass(const stateVec_t& x_0, const stateVecTab_t& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar)
 {
 
     updatedxList.col(0) = x_0;
@@ -357,20 +357,20 @@ void ILQRSolver::doForwardPass(const stateVec_t& x_0)
     for (unsigned int i = 0; i < N; i++) 
     {
         updateduList.col(i)     = uList.col(i) + alpha * kList.col(i) + KList[i] * (updatedxList.col(i) - xList.col(i));
-        costListNew[i]          = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i));
+        
+        costListNew[i]          = costFunction->cost_func_expre_admm(i, updatedxList.col(i), updateduList.col(i), cList_bar.col(i), xList_bar.col(i), uList_bar.col(i));
         updatedxList.col(i + 1) = forward_integration(updatedxList.col(i), updateduList.col(i));
     }
 
-    costListNew[N] = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc);
+    costListNew[N] = costFunction->cost_func_expre_admm(N, updatedxList.col(N), u_NAN_loc, cList_bar.col(N), xList_bar.col(N), uList_bar.col(N-1));
 }
 
 /* 4th-order Runge-Kutta step */
-inline stateVec_t ILQRSolver::forward_integration(const stateVec_t& x, const commandVec_t& u)
+inline stateVec_t ILQRSolverADMM::forward_integration(const stateVec_t& x, const commandVec_t& u)
 {
     // if(debugging_print) TRACE_KUKA_ARM("update: 4th-order Runge-Kutta step\n");
 
     // gettimeofday(&tbegin_period4, NULL);
-
     stateVec_t x_dot1 = dynamicModel->kuka_arm_dynamics(x, u);
     stateVec_t x_dot2 = dynamicModel->kuka_arm_dynamics(x + 0.5 * dt * x_dot1, u);
     stateVec_t x_dot3 = dynamicModel->kuka_arm_dynamics(x + 0.5 * dt * x_dot2, u);
@@ -382,7 +382,7 @@ inline stateVec_t ILQRSolver::forward_integration(const stateVec_t& x, const com
     return x_new;
 }
 
-void ILQRSolver::doBackwardPass()
+void ILQRSolverADMM::doBackwardPass()
 {    
     if (Op.regType == 1)
     {
@@ -436,26 +436,6 @@ void ILQRSolver::doBackwardPass()
             break;
         }
 
-        // if(enableQPBox)
-        // {
-        //     //TRACE("Use Box QP");
-        //     nWSR = 10; //[to be checked]
-        //     H = Quu;
-        //     g = Qu;
-        //     lb = lowerCommandBounds - uList[i];
-        //     ub = upperCommandBounds - uList[i];
-        //     qp->init(H.data(),g.data(),lb.data(),ub.data(),nWSR);
-        //     qp->getPrimalSolution(xOpt);
-        //     k = Map<commandVec_t>(xOpt);
-        //     K = -QuuInv*Qux;
-        //     for(unsigned int i_cmd=0;i_cmd<commandNb;i_cmd++)
-        //     {
-        //         if((k[i_cmd] == lowerCommandBounds[i_cmd]) | (k[i_cmd] == upperCommandBounds[i_cmd]))
-        //         {
-        //             K.row(i_cmd).setZero();
-        //         }
-        //     }
-        // }
 
         if (!enableQPBox)
         {
@@ -504,10 +484,9 @@ void ILQRSolver::doBackwardPass()
 
 
 
-ILQRSolver::traj ILQRSolver::getLastSolvedTrajectory()
+ILQRSolverADMM::traj ILQRSolverADMM::getLastSolvedTrajectory()
 {
     lastTraj.xList = xList;
-    // for(unsigned int i=0;i<N+1;i++)lastTraj.xList[i] += xgoal;//retrieve original state with xgoal
     lastTraj.uList = uList;
     lastTraj.iter = iter;
     lastTraj.finalCost = accumulate(costList.begin(), costList.end(), 0.0);
@@ -519,7 +498,7 @@ ILQRSolver::traj ILQRSolver::getLastSolvedTrajectory()
     return lastTraj;
 }
 
-bool ILQRSolver::isPositiveDefinite(const commandMat_t & Quu_p)
+bool ILQRSolverADMM::isPositiveDefinite(const commandMat_t & Quu_p)
 {
     //Eigen::JacobiSVD<commandMat_t> svd_Quu (Quu, ComputeThinU | ComputeThinV);
     Eigen::VectorXcd singular_values = Quu_p.eigenvalues();

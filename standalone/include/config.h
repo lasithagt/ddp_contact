@@ -36,7 +36,7 @@
 
 #define TimeHorizon 1
 #define TimeStep 0.02
-#define NumberofKnotPt TimeHorizon/TimeStep
+#define NumberofKnotPt TimeHorizon / TimeStep
 #define InterpolationScale 10 
 const int32_t kNumJoints = 7;
 
@@ -95,7 +95,8 @@ typedef std::vector<stateR_commandC_t, Eigen::aligned_allocator<stateR_commandC_
 typedef std::vector<commandR_stateC_t, Eigen::aligned_allocator<commandR_stateC_t> > commandR_stateC_tab_t;
 
 typedef Eigen::Matrix<double, (stateSize-3)/2, Eigen::Dynamic> stateVecTab_half_t;
-typedef std::vector<projStateAndCommand_t, Eigen::aligned_allocator<projStateAndCommand_t> > projStateAndCommandTab_t;
+// typedef std::vector<projStateAndCommand_t, Eigen::aligned_allocator<projStateAndCommand_t> > projStateAndCommandTab_t;
+typedef Eigen::Matrix<double, stateSize + commandSize, Eigen::Dynamic> projStateAndCommandTab_t;
 
 typedef std::vector<std::vector<stateMat_t, Eigen::aligned_allocator<stateMat_t> > > stateTensTab_t;
 typedef std::vector<std::vector<stateR_commandC_t, Eigen::aligned_allocator<stateR_commandC_t> > > stateR_commandC_Tens_t;

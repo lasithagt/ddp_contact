@@ -1,11 +1,9 @@
-#pragma once
-
 #ifndef ILQRSOLVER_H
 #define ILQRSOLVER_H
 
 #include "config.h"
 #include "kuka_arm.h"
-#include "cost_function_kuka_arm.h"
+#include "cost_function_admm.h"
 #include "SoftContactModel.h"
 
 #include <numeric>
@@ -14,8 +12,7 @@
 #include <Eigen/Dense>
 #include <Eigen/StdVector>
 #include <Eigen/Cholesky>
-//#include <qpOASES.hpp>
-//#include <qpOASES/QProblemB.hpp>
+
 
 #define ENABLE_QPBOX 0
 #define DISABLE_QPBOX 1
@@ -37,7 +34,7 @@ using namespace Eigen;
 namespace optimizer {
 
 
-class ILQRSolver
+class ILQRSolverADMM
 {
 public:
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
@@ -89,7 +86,7 @@ public:
 
 private:
     KukaArm* dynamicModel;
-    CostFunctionKukaArm* costFunction;
+    CostFunctionADMM* costFunction;
     unsigned int stateNb;
     unsigned int commandNb;
 
@@ -100,6 +97,10 @@ private:
 
     stateVecTab_t xList; // vector/array of stateVec_t = basically knot config over entire time horizon
     commandVecTab_t uList;
+    // stateVecTab_t cList_bar;
+    // stateVecTab_t xList_bar;
+    // commandVecTab_t uList_bar;
+
     commandVecTab_t uListFull;
     commandVec_t u_NAN; //matrix of <commandsize, 1> = essentially a vector
     stateVecTab_t updatedxList;
@@ -133,7 +134,6 @@ private:
     int diverge;
 
     /* QP variables */
-    //QProblemB* qp;
     bool enableQPBox;
     bool enableFullDDP;
     commandMat_t H;
@@ -142,7 +142,6 @@ private:
     commandVec_t upperCommandBounds;
     commandVec_t lb;
     commandVec_t ub;
-    //real_t* xOpt;
 
     OptSet Op;
     Eigen::Vector2d dV;
@@ -152,15 +151,15 @@ private:
     bool isUNan;
 
 public:
-    ILQRSolver(KukaArm& DynamicModel, CostFunctionKukaArm& CostFunction, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox);
-    void solve(const stateVec_t& x_0, const commandVecTab_t& u_0);
+    ILQRSolverADMM(KukaArm& DynamicModel, CostFunctionADMM& Cost, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox);
+    void solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const stateVecTab_t& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar);
     void initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0);
     struct traj getLastSolvedTrajectory();
 
 private:
     inline stateVec_t forward_integration(const stateVec_t& X, const commandVec_t& U);
     void doBackwardPass();
-    void doForwardPass(const stateVec_t& x_0);
+    void doForwardPass(const stateVec_t& x_0, const stateVecTab_t& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar);
     bool isPositiveDefinite(const commandMat_t & Quu); 
 };
 

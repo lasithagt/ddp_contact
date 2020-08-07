@@ -69,7 +69,7 @@ public:
 
 
         KDL::Chain robot = KDL::KukaDHKdl();
-        std::shared_ptr<KUKAModelKDL> kukaRobot = std::shared_ptr<KUKAModelKDL>(new KUKAModelKDL(robot, robotParams));
+        std::unique_ptr<KUKAModelKDL> kukaRobot = std::unique_ptr<KUKAModelKDL>(new KUKAModelKDL(robot, robotParams));
 
         //======================================
 
