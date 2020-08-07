@@ -56,15 +56,15 @@ target_sources(kuka-models PUBLIC ${SOURCES})
 
 add_library(ddp-solver STATIC)
 target_include_directories(ddp-solver PUBLIC include)
-set(SOURCES_DDP ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/cost_function_kuka_arm.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/kuka_arm.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/ddp.cpp)
+set(SOURCES_DDP ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/kuka_arm.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/ddp.cpp)
 target_link_libraries(ddp-solver PUBLIC kuka-models)
 target_sources(ddp-solver PUBLIC ${SOURCES_DDP})
 
-#add_library(ddp-admm-solver STATIC)
-#target_include_directories(ddp-admm-solver PUBLIC include)
-#set(SOURCES_DDP_ADMM ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver_track.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/cost_function_kuka_arm_track.cc #${CMAKE_CURRENT_SOURCE_DIR}/src/kuka_arm_track.cc)
-#target_link_libraries(ddp-admm-solver PUBLIC kuka-models)
-#target_sources(ddp-admm-solver PUBLIC ${SOURCES_DDP_ADMM})
+add_library(ddp-admm-solver STATIC)
+target_include_directories(ddp-admm-solver PUBLIC include ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobotics/include/)
+set(SOURCES_DDP_ADMM ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver_admm.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/kuka_arm.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/admm.cpp)
+target_link_libraries(ddp-admm-solver PUBLIC kuka-models)
+target_sources(ddp-admm-solver PUBLIC ${SOURCES_DDP_ADMM})
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -85,14 +85,11 @@ target_link_libraries(ik-solvers ModernRoboticsCpp)
 #######################################################################################
 
 
-#add_executable(ddp-contact src/runddp_softcontact.cc)
-#target_include_directories(ddp-contact PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-#target_link_libraries(ddp-contact orocos-kdl ddp-solver kuka-models)
 
 
-#add_executable(ddp-admm-contact src/runADMM_softcontact.cc)
-#target_include_directories(ddp-admm-contact PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-#target_link_libraries(ddp-admm-contact orocos-kdl ddp-admm-solver kuka-models)
+add_executable(ddp-admm-contact src/admm_main.cpp)
+target_include_directories(ddp-admm-contact PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(ddp-admm-contact orocos-kdl ddp-admm-solver kuka-models ModernRoboticsCpp ik-solvers)
 
 
 add_executable(ddp-optim src/ddp_main.cpp)
@@ -107,6 +104,7 @@ target_link_libraries(mpc-optim orocos-kdl ddp-solver kuka-models)
 add_executable(ik-test src/ik_test.cpp)
 target_include_directories(ik-test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobotics/include/ ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ik-test ModernRoboticsCpp ik-solvers)
+
 
 #set(LIB_TEST_SOURCES
 #  ${CMAKE_CURRENT_SOURCE_DIR}/src/IK_solver.cpp
