@@ -82,6 +82,7 @@ add_library(ik-solvers STATIC ./src/IK_solver.cpp ./include/IK_solver.hpp ./incl
 target_include_directories(ik-solvers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobotics/include/)
 target_link_libraries(ik-solvers ModernRoboticsCpp)
 
+
 #######################################################################################
 
 
@@ -106,9 +107,9 @@ target_include_directories(ik-test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobo
 target_link_libraries(ik-test ModernRoboticsCpp ik-solvers)
 
 
-#set(LIB_TEST_SOURCES
-#  ${CMAKE_CURRENT_SOURCE_DIR}/src/IK_solver.cpp
-#)
+add_executable(curvature-test src/test_curvature.cpp)
+target_include_directories(curvature-test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 
 #add_executable(l ${LIB_TEST_SOURCES})
 #target_link_libraries(lib_test ModernRoboticsCpp)
