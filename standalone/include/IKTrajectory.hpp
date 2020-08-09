@@ -26,7 +26,7 @@ public:
 		M     = M_;
 		rho   = rho_;
 
-		N_steps = N;
+		N_steps = N + 1;
 
 		// std::vector for SE(3) cartesian poses, desired trajectory
 		FK_current.resize(N_steps);
@@ -48,6 +48,8 @@ public:
 
 	    // thetalist.col(0)  = q0;
 	    // thetalistd.col(0) = qd0;
+
+		joint_positions->col(0) = q0;
 
 	   	Eigen::VectorXd thetalist0  = q0;
 	    Eigen::VectorXd thetalistd0 = qd0;
@@ -125,7 +127,7 @@ public:
 
 	/* Terminate condition */
 	static inline int terminate(double cost, int iter) {
-		if (cost < 0.01 || iter > 1) {
+		if (cost < 0.01 || iter > 2) {
 			return 1;
 		} 
 		return 0;

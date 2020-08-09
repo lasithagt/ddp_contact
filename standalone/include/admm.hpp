@@ -73,10 +73,11 @@ public:
   ADMM(const ADMMopt& ADMM_opt);
 
   // template<class T>
-  void run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, const stateVec_t& xinit, const stateVec_t& xgoal, const stateVecTab_t& xtrack, 
+  void run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, const stateVec_t& xinit, const stateVecTab_t& xtrack, 
     const std::vector<Eigen::MatrixXd>& cartesianTrack, const Eigen::VectorXd& rho, const Saturation& L, const IKopt& IK);
 
-  projStateAndCommandTab_t projection(const stateVecTab_t& xnew, const commandVecTab_t& unew, const Saturation& L);
+  projStateAndCommandTab_t projection(const stateVecTab_t& xnew, const Eigen::MatrixXd& cnew, const commandVecTab_t& unew, const Saturation& L);
+  void contact_update(std::shared_ptr<KUKAModelKDL>& kukaRobot, const stateVecTab_t& xnew, Eigen::MatrixXd* cnew);
 
 
 protected:
@@ -95,32 +96,35 @@ protected:
 
   // primal parameters
   stateVecTab_t xnew;
+  Eigen::MatrixXd cnew;
   commandVecTab_t unew;
 
+  stateVecTab_t x_avg;
+  stateVecTab_t x_lambda_avg;
+
+  Eigen::MatrixXd q_lambda;
+  Eigen::MatrixXd qd_lambda;
+
   stateVecTab_t xbar;
-  stateVecTab_t cbar;
+  Eigen::MatrixXd cbar;
   commandVecTab_t ubar;
 
   stateVecTab_t xbar_old; // "old" for last ADMM iteration 
-  stateVecTab_t cbar_old;
+  Eigen::MatrixXd cbar_old;
   commandVecTab_t ubar_old; 
   
   // dual parameters
   stateVecTab_t x_lambda;
-  stateVecTab_t c_lambda;
+  Eigen::MatrixXd c_lambda;
   commandVecTab_t u_lambda;
 
   stateVecTab_t x_temp;
-  stateVecTab_t c_temp;
+  Eigen::MatrixXd c_temp;
   commandVecTab_t u_temp;
-
-  stateVecTab_t x_temp2;
-  stateVecTab_t c_temp2;
-  commandVecTab_t u_temp2;
 
   commandVecTab_t u_0;;
 
-  projStateAndCommandTab_t xubar; // for projection
+  Eigen::MatrixXd xubar; // for projection
 
   // primal residual
   std::vector<double> res_x;
@@ -136,7 +140,6 @@ protected:
 
   // joint_positions_IK
   Eigen::MatrixXd joint_positions_IK;
-  Eigen::VectorXd thetalistd0;
 
 };
 

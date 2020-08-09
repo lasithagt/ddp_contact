@@ -312,7 +312,7 @@ void ILQRSolverADMM::initializeTraj(const stateVec_t& x_0, const commandVecTab_t
         updatedxList.col(i + 1) = forward_integration(updatedxList.col(i), updateduList.col(i));
     }
 
-    // getting final cost, state, input=NaN
+    // getting final cost, state, input = NaN
     costList[N] = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc);
 
     // simplistic divergence test, check for the last time step if it has diverged.
@@ -371,6 +371,7 @@ inline stateVec_t ILQRSolverADMM::forward_integration(const stateVec_t& x, const
     // if(debugging_print) TRACE_KUKA_ARM("update: 4th-order Runge-Kutta step\n");
 
     // gettimeofday(&tbegin_period4, NULL);
+    
     stateVec_t x_dot1 = dynamicModel->kuka_arm_dynamics(x, u);
     stateVec_t x_dot2 = dynamicModel->kuka_arm_dynamics(x + 0.5 * dt * x_dot1, u);
     stateVec_t x_dot3 = dynamicModel->kuka_arm_dynamics(x + 0.5 * dt * x_dot2, u);

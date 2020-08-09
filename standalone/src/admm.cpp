@@ -14,32 +14,30 @@ ADMM::ADMM(const ADMMopt& ADMM_opt) : ADMM_OPTS(ADMM_opt)
 
     // primal parameters
     xnew.resize(stateSize, N + 1);
+    cnew.resize(2, N + 1);
     unew.resize(commandSize, N);
 
     xbar.resize(stateSize, N + 1);
-    cbar.resize(stateSize, N + 1);
+    cbar.resize(2, N + 1);
     ubar.resize(commandSize, N);
 
-    xbar_old.resize(stateSize, N + 1); // "old" for last ADMM iteration 
-    cbar_old.resize(stateSize, N + 1);
-    ubar_old.resize(commandSize, N); 
-    
+    x_avg.resize(stateSize, N + 1);
+    x_lambda_avg.resize(stateSize, N + 1);
+    q_lambda.resize(7, N + 1);
+
     // dual parameters
     x_lambda.resize(stateSize, N + 1);
-    c_lambda.resize(stateSize, N + 1);
+    c_lambda.resize(2, N + 1);
     u_lambda.resize(commandSize, N);
 
     x_temp.resize(stateSize, N + 1);
-    c_temp.resize(stateSize, N + 1);
+    c_temp.resize(2, N + 1);
     u_temp.resize(commandSize, N);
 
-    x_temp2.resize(stateSize, N + 1);
-    c_temp2.resize(stateSize, N + 1);
-    u_temp2.resize(commandSize, N);
 
     u_0.resize(commandSize, N);
 
-    xubar.resize(stateSize + commandSize, N); // for projection
+    xubar.resize(stateSize + commandSize + 2, N); // for projection
 
     // primal residual
     res_x.resize(ADMM_opt.ADMMiterMax, 0);
@@ -55,10 +53,9 @@ ADMM::ADMM(const ADMMopt& ADMM_opt) : ADMM_OPTS(ADMM_opt)
 
     // joint_positions_IK
     joint_positions_IK.resize(7, N + 1);
-    thetalistd0.resize(7);
 }
 // template<class T>
-void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, const stateVec_t& xinit, const stateVec_t& xgoal,
+void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, const stateVec_t& xinit,
   const stateVecTab_t& xtrack, const std::vector<Eigen::MatrixXd>& cartesianTrack,
    const Eigen::VectorXd& rho, const Saturation& L, const IKopt& IK_opt) {
 
@@ -66,21 +63,8 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
     struct timeval tbegin,tend;
     double texec = 0.0;
     
-    unsigned int iterMax = 15; //DDP iteration max
- 
-    thetalistd0.setZero();
+    unsigned int iterMax = 15; // DDP iteration max
 
-    xbar.setZero();
-    cbar.setZero();
-    ubar.setZero();
-
-    x_temp.setZero();
-    c_temp.setZero();
-    u_temp.setZero();
-
-    x_temp2.setZero();
-    c_temp2.setZero();
-    u_temp2.setZero();
 
     /* -------------------- orocos kdl robot initialization-------------------------*/
     KUKAModelKDLInternalData robotParams;
@@ -88,51 +72,11 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
     robotParams.Kv = Eigen::MatrixXd(7,7);
     robotParams.Kp = Eigen::MatrixXd(7,7);
 
-    // ILQRSolver::traj lastTraj;
-
-    Eigen::VectorXd q_pos_init( (stateSize-3) / 2);
-    Eigen::VectorXd q_vel_init( (stateSize-3) / 2);
-    Eigen::VectorXd q_pos_goal( (stateSize-3) / 2);
-    Eigen::VectorXd q_vel_goal( (stateSize-3) / 2);
-
-    q_pos_init.setZero();
-    q_pos_goal.setZero();
-    q_vel_goal.setZero();
-    q_vel_init.setZero();
-
-    q_pos_init = xinit.head((stateSize-3)/2);
-    q_vel_init = xinit.segment((stateSize-3)/2, (stateSize-3)/2);
-
-    // std::cout << q_pos_init.transpose().format(CleanFmt) << std::endl;
-
-    q_pos_goal = xgoal.head(stateSize/2);
-    q_vel_goal = xgoal.segment((stateSize-3)/2, (stateSize-3)/2); 
-
-
-    /*----------------------warm-start-control-----------------------------*/
-    // Get the gravity compensation for warm-start
-    VectorXd q(9);
-    VectorXd qd(9);
-    q.setZero();
-
-    qd.setZero();
-    Eigen::VectorXd gravityTorque(7);
-    kukaRobot->getGravityVector(q_pos_init.data(), gravityTorque);
 
     /*------------------initialize control input-----------------------*/
-    // commandVecTab_t u_0;
-
-    for (unsigned i=0; i < N; i++)
-    {
-      u_0.col(i) = gravityTorque;
-    }
-
-
-    /* Initialize Solver */
-    optimizer::ILQRSolverADMM::traj lastTraj;
 
     // cost function. TODO: make this updatable
-    CostFunctionADMM costFunction_admm(xgoal, xtrack, rho);
+    CostFunctionADMM costFunction_admm(xtrack.col(N), xtrack, rho);
 
 
     /* -------------------- Optimizer Params ------------------------ */
@@ -145,31 +89,48 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
     // TODO: make this updatable
     optimizer::ILQRSolverADMM solverDDP(KukaArmModel, costFunction_admm, solverOptions, N, ADMM_OPTS.dt, ENABLE_FULLDDP, ENABLE_QPBOX);
 
-
-    // // Initialize Trajectory to get xnew with u_0 
-    solverDDP.solve(xinit, u_0, cbar, xbar, ubar);
-
-
-    /* ---------------------------------------- Initialize IK solver ---------------------------------------- */
-    
-    IKTrajectory<IK_FIRST_ORDER> IK_solve = IKTrajectory<IK_FIRST_ORDER>(IK_opt.Slist, IK_opt.M, IK_opt.joint_limits, IK_opt.eomg, IK_opt.ev, rho, N);
-    IK_solve.getTrajectory(cartesianTrack, xnew.col(0).head(7), thetalistd0, xbar.block(0, 0, 7, N + 1), xbar.block(0, 0, 7, N + 1),  &joint_positions_IK);
-
-    /* ------------------------------------------------------------------------------------------------------ */
-
+    /* ---------------------------------------- Initial Trajectory ---------------------------------------- */
+    // Initialize Trajectory to get xnew with u_0 
+    optimizer::ILQRSolverADMM::traj lastTraj;
+    solverDDP.initializeTraj(xinit, u_0);
 
     lastTraj = solverDDP.getLastSolvedTrajectory();
     xnew = lastTraj.xList;
     unew = lastTraj.uList;
+    // std::cout << xnew << std::endl;
+
     final_cost[0] = lastTraj.finalCost;
 
-    for (unsigned int k = 0; k < N; k++) {
-      x_lambda.col(k) = xnew.col(k) - xbar.col(k);
-      u_lambda.col(k) = unew.col(k) - ubar.col(k);
-    }
+    /* ---------------------------------------- Initialize IK solver ---------------------------------------- */
+    
+    IKTrajectory<IK_FIRST_ORDER> IK_solve = IKTrajectory<IK_FIRST_ORDER>(IK_opt.Slist, IK_opt.M, IK_opt.joint_limits, IK_opt.eomg, IK_opt.ev, rho, N);
+    IK_solve.getTrajectory(cartesianTrack, xnew.col(0).head(7), xnew.col(0).segment(6,7), xbar.block(0, 0, 7, N + 1), xbar.block(0, 0, 7, N + 1),  &joint_positions_IK);
 
-    x_lambda.col(N) = xnew.col(N) - xbar.col(N);
+    /* ------------------------------------------------------------------------------------------------------- */
+    double error_fk = 0.0;
+
+    /* ----------------------------------------------- TESTING ----------------------------------------------- */
+    for (int i = 0;i < cartesianTrack.size()-1;i++) {
+        error_fk = error_fk + (cartesianTrack.at(i) - mr::FKinSpace(IK_opt.M, IK_opt.Slist, joint_positions_IK.col(i))).norm();
+    }
+    std::cout << error_fk << std::endl; 
+    /* ----------------------------------------- END TESTING ----------------------------------------- */
+
+    /* ---------------------------------------- Initialize xbar, cbar,ubar ---------------------------------------- */
+    xbar.block(0,0,7,xbar.cols()) = joint_positions_IK;
+    /* calculates contact terms */
+    contact_update(kukaRobot, xnew, &cnew);
+    cbar = cnew;
+    ubar.setZero();
+
+    x_lambda.setZero();
+    c_lambda.setZero();
+    u_lambda.setZero();
+    q_lambda.setZero();
+
+
     double cost = 0.0;
+
    
     /* ------------------------------------------------ Run ADMM ---------------------------------------------- */
     std::cout << "\n ================================= begin ADMM =================================" << std::endl;
@@ -177,41 +138,42 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
 
     for (unsigned int i = 0; i < ADMM_OPTS.ADMMiterMax; i++) {
         // TODO: Stopping criterion is needed
-
-        for (unsigned int k = 0;k < N; k++) {
-            x_temp.col(k) = xbar.col(k) - x_lambda.col(k);
-            u_temp.col(k) = ubar.col(k) - u_lambda.col(k);
-        }
-        x_temp.col(N) = xbar.col(N) - x_lambda.col(N);
-
         std::cout << "\n ================================= ADMM iteration " << i + 1 << " ================================= \n";
 
-        // iLQR solver block
+       /* ---------------------------------------- iLQRADMM solver block ----------------------------------------   */
         solverDDP.solve(xinit, u_0, cbar, xbar, ubar);
         lastTraj = solverDDP.getLastSolvedTrajectory();
-
-
         xnew = lastTraj.xList;
         unew = lastTraj.uList;
 
-        // IK block
-        IK_solve.getTrajectory(cartesianTrack, xnew.col(0).head(7), thetalistd0, xbar.block(0, 0, 7, N + 1), xbar.block(0, 0, 7, N + 1),  &joint_positions_IK);
+        /* ----------------------------- update cnew. TODO: variable path curves -----------------------------  */
+        contact_update(kukaRobot, xnew, &cnew);
+
+        /* ---------------------------------------- IK block update ----------------------------------------   */
+        IK_solve.getTrajectory(cartesianTrack, xnew.col(0).head(7), xnew.col(0).segment(6,7), xbar.block(0, 0, 7, N + 1) - q_lambda, 
+            xbar.block(0, 0, 7, N + 1),  &joint_positions_IK);
 
 
-        /* ADMM update */
+        /* ------------------------------------- Average States ------------------------------------   */
+
+        x_avg.block(0, 0, 7, xnew.cols()) = (xnew.block(0, 0, 7, xnew.cols())  + joint_positions_IK) / 2;
+        x_lambda_avg.block(0, 0, 7, x_lambda_avg.cols()) = (q_lambda + x_lambda.block(0, 0, 7, x_lambda.cols())) / 2;
+
+        /* ---------------------------------------- Projection ----------------------------------------   */
         // Projection block to feasible sets (state and control contraints)
-        xbar_old = xbar;
-        ubar_old = ubar;
 
-        for (unsigned int k = 0;k < N; k++) {
-            x_temp2.col(k) = xnew.col(k) + x_lambda.col(k);
-            u_temp2.col(k) = unew.col(k) + u_lambda.col(k);
-        }
+        x_temp.block(0, 0, 7, xnew.cols()) = x_avg + x_lambda_avg.block(0, 0, 7, x_lambda_avg.cols());
+        c_temp = cnew + c_lambda;
+        u_temp = unew + u_lambda;
 
-        x_temp2.col(N) = xnew.col(N) + x_lambda.col(N);
+        xubar = projection(x_temp, c_temp, u_temp, L);
 
-        /* Projection */
-        xubar = projection(x_temp2, u_temp2, L);
+
+        // for (unsigned int k = 0;k < N; k++) {
+        //     x_temp.col(k) = xbar.col(k) - x_lambda.col(k);
+        //     u_temp.col(k) = ubar.col(k) - u_lambda.col(k);
+        // }
+        // x_temp.col(N) = xbar.col(N) - x_lambda.col(N);
 
 
         /* Dual variables update */
@@ -222,20 +184,21 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
             ubar.col(j) = xubar.col(j).tail(commandSize);
             // cout << "u_bar[" << j << "]:" << ubar[j].transpose() << endl;
 
-            c_lambda.col(j) += xnew.col(j) - xbar.col(j);
+            c_lambda.col(j) += cnew.col(j) - cbar.col(j);
             x_lambda.col(j) += xnew.col(j) - xbar.col(j);
             u_lambda.col(j) += unew.col(j) - ubar.col(j);
+            q_lambda.col(j) += joint_positions_IK.col(j) - xbar.col(i).head(7);
             // cout << "u_lambda[" << j << "]:" << u_lambda[j].transpose() << endl;
 
             // Save residuals for all iterations
-            res_c[i] += (xnew.col(j) - xbar.col(j)).norm();
+            res_c[i] += (cnew.col(j) - cbar.col(j)).norm();
             res_x[i] += (xnew.col(j) - xbar.col(j)).norm();
             res_u[i] += (unew.col(j) - ubar.col(j)).norm();
 
             // res_xlambda[i] += vel_weight*(xbar.col(j) - xbar_old.col(j)).norm();
-            res_clambda[i] += (cbar.col(j) - cbar_old.col(j)).norm();
-            res_xlambda[i] += (xbar.col(j) - xbar_old.col(j)).norm();
-            res_ulambda[i] += 0*(ubar.col(j) - ubar_old.col(j)).norm();
+            // res_clambda[i] += 0*(cbar.col(j) - cbar_old.col(j)).norm();
+            // res_xlambda[i] += 0*(xbar.col(j) - xbar_old.col(j)).norm();
+            // res_ulambda[i] += 0*(ubar.col(j) - ubar_old.col(j)).norm();
         }
 
         xbar.col(N) = xubar.col(N).head(stateSize);
@@ -244,7 +207,7 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
         res_x[i] += (xnew.col(N) - xbar.col(N)).norm();
         res_xlambda[i] += 0*(xbar.col(N) - xbar_old.col(N)).norm();
 
-        // get the cost without augmented Lagrangian terms
+        /* ------------------------------- get the cost without augmented Lagrangian terms ------------------------------- */
         cost = 0;
         for (int i = 0;i < N;i++) {
             cost = cost + costFunction_admm.cost_func_expre(i, xnew.col(i), unew.col(i));
@@ -255,33 +218,12 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
 
     gettimeofday(&tend,NULL);    
 
-    // testSolverKukaArm.firstInitSolver(xinit, xgoal, xbar, ubar, unew, N, dt, iterMax, tolFun, tolGrad);
-    // testSolverKukaArm.initializeTraj();
-    // xnew = testSolverKukaArm.updatedxList;
-    
+    solverDDP.initializeTraj(xinit, unew);
 
-    // joint_state_traj.resize(N+1);
-    // joint_state_traj_interp.resize(N * InterpolationScale + 1);
+    lastTraj = solverDDP.getLastSolvedTrajectory();
+    xnew = lastTraj.xList;
+    unew = lastTraj.uList;
 
-    // for(unsigned int i = 0; i <= N; i++) {
-    //   joint_state_traj[i] = xnew[i];
-    // }
-
-    // torque_traj = unew;
-
-    // //linear interpolation to 1ms
-    // for(unsigned int i = 0; i < stateSize; i++) {
-
-    //   for(unsigned int j = 0; j < N * InterpolationScale; j++) {
-    //    unsigned int index = j / 10;
-    //    joint_state_traj_interp[j](i,0) =  joint_state_traj[index](i,0) + (static_cast<double>(j)-static_cast<double>(index*10.0))*(joint_state_traj[index+1](i,0) - joint_state_traj[index](i,0))/10.0;
-    //   }
-
-    //   joint_state_traj_interp[N*InterpolationScale](i,0) = joint_state_traj[N](i,0);
-    // }
-
-    // texec=(static_cast<double>(1000*(tend.tv_sec-tbegin.tv_sec)+((tend.tv_usec-tbegin.tv_usec)/1000)))/1000.;
-    // // texec /= Num_run;
 
     cout << endl;
     // cout << "Number of iterations: " << lastTraj.iter + 1 << endl;
@@ -324,8 +266,7 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
 Projects the states and commands to be within bounds
 
 */
-projStateAndCommandTab_t ADMM::projection(const stateVecTab_t& xnew, const commandVecTab_t& unew, const ADMM::Saturation& L) {
-    projStateAndCommandTab_t xubar;
+projStateAndCommandTab_t ADMM::projection(const stateVecTab_t& xnew, const Eigen::MatrixXd& cnew, const commandVecTab_t& unew, const ADMM::Saturation& L) {
 
     for(int i = 0;i < NumberofKnotPt + 1; i++) {
 
@@ -341,14 +282,16 @@ projStateAndCommandTab_t ADMM::projection(const stateVecTab_t& xnew, const comma
                 else {
                     xubar(j,i) = xnew(j,i);
                 }
-            }
+            } else if((j > stateSize) && (j < (stateSize + 2))) {
+                if((cnew(0, j)) > 0.3 * std::abs(cnew(1, j))) {
+                    xubar(j,i) = 0.3 * std::abs(cnew(1, i));
+                }
 
-            else
-            { //torque constraints
-                if(unew(j-stateSize, i) > L.controlLimits(1, j)) {
+            } else { //torque constraints
+                if(unew(j-stateSize-2, i) > L.controlLimits(1, j)) {
                     xubar(j,i) = L.controlLimits(1, j);
                 }
-                else if(unew(j-stateSize,i) < L.controlLimits(0, j)) {
+                else if(unew(j-stateSize-2,i) < L.controlLimits(0, j)) {
                     xubar(j,i) = L.controlLimits(1, j);
                 }
                 else {
@@ -359,6 +302,25 @@ projStateAndCommandTab_t ADMM::projection(const stateVecTab_t& xnew, const comma
         }
     }
     return xubar;
+}
+
+/* Computes contact terms
+TODO: compute variable RC. make it a structure
+*/
+void ADMM::contact_update(std::shared_ptr<KUKAModelKDL>& kukaRobot, const stateVecTab_t& xnew, Eigen::MatrixXd* cnew) {
+    double vel = 0.0;
+    double m = 0.3; 
+    double R = 0.4;
+
+    Eigen::MatrixXd jacobian(6, 7);
+
+    for (int i = 0; i < xnew.cols(); i++) {
+        kukaRobot->getSpatialJacobian(const_cast<double*>(xnew.col(i).head(7).data()), jacobian);
+        vel = (jacobian * xnew.col(i).segment(6, 7)).norm();
+        (*cnew)(0,i) = m * vel * vel / R;
+        (*cnew)(1,i) = *(const_cast<double*>(xnew.col(i).tail(1).data()));
+    }
+
 }
 
 

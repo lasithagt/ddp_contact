@@ -79,9 +79,9 @@ int main(int argc, char *argv[])
   /* ----------------------------------------------------------------------------------------------- */
 
   /* State Tracking. Force tracking */
-  // Eigen::MatrixXd F(3, NumberofKnotPt + 1);
+  Eigen::MatrixXd F(3, N);
   // F.row
-  // xtrack.block() = F;
+  xtrack.block(14, 0, 3, xtrack.cols()) = F;
  
 
   /* Cartesian Tracking */
@@ -160,12 +160,25 @@ int main(int argc, char *argv[])
   std::cout << mr::FKinSpace(M, Slist, q) << std::endl;
 
   
-
-
   std::vector<Eigen::MatrixXd> cartesianPoses = IK_traj.generateLissajousTrajectories(R, 0.8, 1, 3, 0.08, 0.08, N, Tf);
 
   /* initialize xinit, xgoal, xtrack - for the hozizon*/
-  // optimizerADMM.run(kukaRobot, KukaArmModel, xinit, xgoal, xtrack, cartesianPoses, rho, LIMITS, IK_OPT);
+  Eigen::VectorXd thetalist0(7);
+  Eigen::VectorXd thetalistd0(7);
+  Eigen::VectorXd q_bar(7);
+  Eigen::VectorXd qd_bar(7);
+  Eigen::VectorXd thetalist_ret(7);
+  thetalist0 << 0.1, 0.2, 0.1, 0.2, 0.1, 0.1, 0.1;
+  thetalistd0 << 0, 0, 0, 0, 0, 0, 0;
+  q_bar << 0, 0, 0, 0, 0, 0, 0;
+  qd_bar << 0, 0, 0, 0, 0, 0, 0;
+
+  bool initial = true;
+  IK_FIRST_ORDER IK = IK_FIRST_ORDER(IK_OPT.Slist,  IK_OPT.M, IK_OPT.joint_limits, IK_OPT.eomg, IK_OPT.ev, rho);
+  IK.getIK(cartesianPoses.at(0), thetalist0, thetalistd0, q_bar, qd_bar, initial, &thetalist_ret);
+  xinit.head(7) = thetalist_ret;
+
+  optimizerADMM.run(kukaRobot, KukaArmModel, xinit, xtrack, cartesianPoses, rho, LIMITS, IK_OPT);
 
   // TODO : saving data file
 
