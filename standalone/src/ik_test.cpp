@@ -62,7 +62,7 @@ int main() {
 	IK_FIRST_ORDER IK = IK_FIRST_ORDER(Slist,  M, joint_limits, eomg, ev, rho);
 
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
-	IK.getIK(Td, thetalist0, thetalistd0, q_bar, qd_bar, initial, &thetalist_ret);
+	IK.getIK(Td, thetalist0, thetalistd0, q_bar, qd_bar, initial, rho, &thetalist_ret);
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 
 	duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
@@ -96,7 +96,7 @@ int main() {
 
 	// IK trajectory
 	t1 = high_resolution_clock::now();
-	IK_traj.getTrajectory(poses, thetalist_ret, thetalistd0, q_barM, qd_barM,  &joint_positions);
+	IK_traj.getTrajectory(poses, thetalist_ret, thetalistd0, q_barM, qd_barM, rho,  &joint_positions);
 	t2 = high_resolution_clock::now();
 	time_span = duration_cast<duration<double>>(t2 - t1);
 	std::cout << "It took me " << time_span.count() << " seconds.";

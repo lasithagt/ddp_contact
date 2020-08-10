@@ -1,8 +1,6 @@
-#include <iostream>
 #include <memory>
 #include <Eigen/Dense>
-#include <chrono>
-#include <ctime>
+
 
 #include "admm.hpp"
 
@@ -18,7 +16,26 @@ int main(int argc, char *argv[])
 
   ADMM::ADMMopt ADMMopts(dt, 1e-5, 1e-5, 15, ADMMiterMax);
 
-  ADMM optimizerADMM(ADMMopts);
+  Eigen::MatrixXd joint_lims(2,7);
+  double eomg = 0.00001;
+  double ev   = 0.00001;
+
+  /* Cartesian Tracking. IKopt */
+  IKTrajectory<IK_FIRST_ORDER>::IKopt IK_OPT(7);
+  models::KUKA robotIK = models::KUKA();
+  Eigen::MatrixXd Slist(6,7);
+  Eigen::MatrixXd M(4,4);
+  robotIK.getSlist(&Slist); 
+  robotIK.getM(&M);
+
+  IK_OPT.joint_limits = joint_lims;
+  IK_OPT.ev = ev;
+  IK_OPT.eomg = eomg;
+  IK_OPT.Slist = Slist;
+  IK_OPT.M = M;
+
+
+  ADMM optimizerADMM(ADMMopts, IK_OPT);
   stateVec_t xinit, xgoal;
   stateVecTab_t xtrack;
   xtrack.resize(stateSize, NumberofKnotPt + 1);
@@ -36,8 +53,6 @@ int main(int argc, char *argv[])
   KDL::Chain robot = KDL::KukaDHKdl();
   std::shared_ptr<KUKAModelKDL> kukaRobot = std::shared_ptr<KUKAModelKDL>(new KUKAModelKDL(robot, robotParams));
 
-
-
   ContactModel::ContactParams cp_;
   cp_.E = 1000;
   cp_.mu = 0.5;
@@ -48,10 +63,6 @@ int main(int argc, char *argv[])
   ContactModel::SoftContactModel contactModel(cp_);
   kukaRobot->initRobot();
 
-  // Eigen::VectorXd q_pos_init(7);
-
-  // Eigen::VectorXd gravityTorque(7);
-  // kukaRobot->getGravityVector(q_pos_init.data(), gravityTorque);
 
   // dynamic model of the manipulator and the contact model
   unsigned int N = NumberofKnotPt + 1;
@@ -84,80 +95,19 @@ int main(int argc, char *argv[])
   xtrack.block(14, 0, 3, xtrack.cols()) = F;
  
 
-  /* Cartesian Tracking */
-  ADMM::IKopt IK_OPT(7);
-  models::KUKA robotIK = models::KUKA();
-  Eigen::MatrixXd Slist(6,7);
-  Eigen::MatrixXd M(4,4);
-  robotIK.getSlist(&Slist); 
-  robotIK.getM(&M);
 
-
-  Eigen::MatrixXd joint_lims(2,7);
-  double eomg = 0.00001;
-  double ev   = 0.00001;
-  // parameters for ADMM, penelty terms
-  Eigen::VectorXd rho(5);
-  rho << 1, 0.01, 1, 0, 1;
+  // parameters for ADMM, penelty terms. initial
+  Eigen::VectorXd rho_init(5);
+  rho_init << 0, 0, 0, 0, 0;
   
-  IK_OPT.joint_limits = joint_lims;
-  IK_OPT.ev = ev;
-  IK_OPT.eomg = eomg;
-  IK_OPT.Slist = Slist;
-  IK_OPT.M = M;
 
-  IKTrajectory<IK_FIRST_ORDER> IK_traj = IKTrajectory<IK_FIRST_ORDER>(Slist, M, joint_lims, eomg, ev, rho, N);
+  IKTrajectory<IK_FIRST_ORDER> IK_traj = IKTrajectory<IK_FIRST_ORDER>(Slist, M, joint_lims, eomg, ev, rho_init, N);
 
 
-  rho << 0, 0, 0, 0, 0;
   Eigen::MatrixXd R(3,3);
   R << 1, 0, 0, 0, 1, 0, 0, 0, 1;
   double Tf = 2 * M_PI;
 
-
-  Eigen::Vector3d accel(0,0,0);
-  Eigen::Vector3d vel(0,0,0);
-  Eigen::Vector3d poseP(0,0,0);
-  Eigen::Matrix<double,3,3> poseM;
-  Eigen::VectorXd q(7);
-  // double* q = new double(7);
-  q.setZero();
-  q(0) = M_PI/4;
-  q(1) = M_PI/4;
-  q(2) = -M_PI/4;
-  q(3) = M_PI/4;
-  q(4) = M_PI/4;
-  q(5) = -M_PI/4;
-  q(6) = M_PI/4;
-  // for (int i = 0;i < 7; i++) {
-  //   q[i] = 0;
-  // }
-  using namespace std::chrono;
-
-  double* qd = new double(7);
-  double* qdd = new double(7);
-  high_resolution_clock::time_point t1 = high_resolution_clock::now();
-
-  kukaRobot->getForwardKinematics(q.data(), qd, qdd, poseM, poseP, vel, accel, false);
-  high_resolution_clock::time_point t2 = high_resolution_clock::now();
-  duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
-
-  std::cout << "It took me " << time_span.count() << " seconds.";
-  // delete q;
-  delete qd;
-  delete qdd;
-
-  t1 = high_resolution_clock::now();
-
-  mr::FKinSpace(M, Slist, q);
-  t2 = high_resolution_clock::now();
-
-  time_span = duration_cast<duration<double>>(t2 - t1);
-  std::cout << "It took me " << time_span.count() << " seconds.";
-  std::cout << std::endl;
-
-  std::cout << mr::RpToTrans(poseM.transpose(), poseP) << std::endl;
-  std::cout << mr::FKinSpace(M, Slist, q) << std::endl;
 
   
   std::vector<Eigen::MatrixXd> cartesianPoses = IK_traj.generateLissajousTrajectories(R, 0.8, 1, 3, 0.08, 0.08, N, Tf);
@@ -174,11 +124,15 @@ int main(int argc, char *argv[])
   qd_bar << 0, 0, 0, 0, 0, 0, 0;
 
   bool initial = true;
-  IK_FIRST_ORDER IK = IK_FIRST_ORDER(IK_OPT.Slist,  IK_OPT.M, IK_OPT.joint_limits, IK_OPT.eomg, IK_OPT.ev, rho);
-  IK.getIK(cartesianPoses.at(0), thetalist0, thetalistd0, q_bar, qd_bar, initial, &thetalist_ret);
+  IK_FIRST_ORDER IK = IK_FIRST_ORDER(IK_OPT.Slist,  IK_OPT.M, IK_OPT.joint_limits, IK_OPT.eomg, IK_OPT.ev, rho_init);
+
+  IK.getIK(cartesianPoses.at(0), thetalist0, thetalistd0, q_bar, qd_bar, initial, rho_init, &thetalist_ret);
   xinit.head(7) = thetalist_ret;
 
-  optimizerADMM.run(kukaRobot, KukaArmModel, xinit, xtrack, cartesianPoses, rho, LIMITS, IK_OPT);
+  Eigen::VectorXd rho(5);
+  rho << 1, 0.01, 0, 0, 1;
+  
+  optimizerADMM.run(kukaRobot, KukaArmModel, xinit, xtrack, cartesianPoses, rho, LIMITS);
 
   // TODO : saving data file
 

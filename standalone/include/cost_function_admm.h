@@ -67,7 +67,7 @@ public:
     }
 
     /* return the cost with admm */
-    scalar_t cost_func_expre_admm(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const stateVec_t& cList_bar, const stateVec_t& xList_bar, const commandVec_t& uList_bar)
+    scalar_t cost_func_expre_admm(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const Eigen::MatrixXd& cList_bar, const stateVec_t& xList_bar, const commandVec_t& uList_bar)
     {
         scalar_t cost_;
         unsigned int Nl = NumberofKnotPt;
@@ -86,7 +86,7 @@ public:
     }
 
     /* compute derivatives */
-    void computeDerivatives(const stateVecTab_t& xList, const commandVecTab_t& uList, const stateVecTab_t& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar)
+    void computeDerivatives(const stateVecTab_t& xList, const commandVecTab_t& uList, const Eigen::MatrixXd& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar)
     {
         // TODO : get the state size from the dynamics class
         unsigned int Nl = xList.cols();

@@ -7,7 +7,7 @@
 
 using namespace Eigen;
 
-ADMM::ADMM(const ADMMopt& ADMM_opt) : ADMM_OPTS(ADMM_opt)
+ADMM::ADMM(const ADMMopt& ADMM_opt, const IKTrajectory<IK_FIRST_ORDER>::IKopt& IK_opt) : ADMM_OPTS(ADMM_opt), IK_OPT(IK_opt)
 {
     /* Initalize Primal and Dual variables */
     N = NumberofKnotPt;
@@ -52,12 +52,30 @@ ADMM::ADMM(const ADMMopt& ADMM_opt) : ADMM_OPTS(ADMM_opt)
     final_cost.resize(ADMM_opt.ADMMiterMax + 1, 0);
 
     // joint_positions_IK
-    joint_positions_IK.resize(7, N + 1);
+    joint_positions_IK.resize(7, N + 1);  
+
+    Eigen::VectorXd rho_init(5);
+    rho_init << 0, 0, 0, 0, 0;
+    IK_solve = IKTrajectory<IK_FIRST_ORDER>(IK_opt.Slist, IK_opt.M, IK_opt.joint_limits, IK_opt.eomg, IK_opt.ev, rho_init, N);
+
+    // initialize curvature object
+    curve = Curvature();
+
+    L.resize(N + 1);
+    R_c.resize(N + 1);
+    k.resize(N + 1 ,3);
+
+    X_curve.resize(3, N + 1);
+
+    robotIK = models::KUKA();
+
+
 }
-// template<class T>
+
+/* optimizer execution */
 void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, const stateVec_t& xinit,
   const stateVecTab_t& xtrack, const std::vector<Eigen::MatrixXd>& cartesianTrack,
-   const Eigen::VectorXd& rho, const Saturation& L, const IKopt& IK_opt) {
+   const Eigen::VectorXd& rho, const Saturation& L) {
 
 
     struct timeval tbegin,tend;
@@ -103,15 +121,16 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
 
     /* ---------------------------------------- Initialize IK solver ---------------------------------------- */
     
-    IKTrajectory<IK_FIRST_ORDER> IK_solve = IKTrajectory<IK_FIRST_ORDER>(IK_opt.Slist, IK_opt.M, IK_opt.joint_limits, IK_opt.eomg, IK_opt.ev, rho, N);
-    IK_solve.getTrajectory(cartesianTrack, xnew.col(0).head(7), xnew.col(0).segment(6,7), xbar.block(0, 0, 7, N + 1), xbar.block(0, 0, 7, N + 1),  &joint_positions_IK);
+    IK_solve.getTrajectory(cartesianTrack, xnew.col(0).head(7), xnew.col(0).segment(6,7), xbar.block(0, 0, 7, N + 1), xbar.block(0, 0, 7, N + 1), rho, &joint_positions_IK);
+    X_curve = IK_solve.getFKCurrentPos(); 
+
 
     /* ------------------------------------------------------------------------------------------------------- */
     double error_fk = 0.0;
 
     /* ----------------------------------------------- TESTING ----------------------------------------------- */
     for (int i = 0;i < cartesianTrack.size()-1;i++) {
-        error_fk = error_fk + (cartesianTrack.at(i) - mr::FKinSpace(IK_opt.M, IK_opt.Slist, joint_positions_IK.col(i))).norm();
+        error_fk = error_fk + (cartesianTrack.at(i) - mr::FKinSpace(IK_OPT.M, IK_OPT.Slist, joint_positions_IK.col(i))).norm();
     }
     std::cout << error_fk << std::endl; 
     /* ----------------------------------------- END TESTING ----------------------------------------- */
@@ -134,7 +153,8 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
    
     /* ------------------------------------------------ Run ADMM ---------------------------------------------- */
     std::cout << "\n ================================= begin ADMM =================================" << std::endl;
-    gettimeofday(&tbegin,NULL);
+
+    gettimeofday(&tbegin, NULL);
 
     for (unsigned int i = 0; i < ADMM_OPTS.ADMMiterMax; i++) {
         // TODO: Stopping criterion is needed
@@ -142,6 +162,7 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
 
        /* ---------------------------------------- iLQRADMM solver block ----------------------------------------   */
         solverDDP.solve(xinit, u_0, cbar, xbar, ubar);
+
         lastTraj = solverDDP.getLastSolvedTrajectory();
         xnew = lastTraj.xList;
         unew = lastTraj.uList;
@@ -151,7 +172,7 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
 
         /* ---------------------------------------- IK block update ----------------------------------------   */
         IK_solve.getTrajectory(cartesianTrack, xnew.col(0).head(7), xnew.col(0).segment(6,7), xbar.block(0, 0, 7, N + 1) - q_lambda, 
-            xbar.block(0, 0, 7, N + 1),  &joint_positions_IK);
+            xbar.block(0, 0, 7, N + 1), rho,  &joint_positions_IK);
 
 
         /* ------------------------------------- Average States ------------------------------------   */
@@ -162,9 +183,10 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
         /* ---------------------------------------- Projection ----------------------------------------   */
         // Projection block to feasible sets (state and control contraints)
 
-        x_temp.block(0, 0, 7, xnew.cols()) = x_avg + x_lambda_avg.block(0, 0, 7, x_lambda_avg.cols());
+        x_temp.block(0, 0, 7, xnew.cols()) = x_avg.block(0, 0, 7, xnew.cols())  + x_lambda_avg.block(0, 0, 7, x_lambda_avg.cols());//
         c_temp = cnew + c_lambda;
         u_temp = unew + u_lambda;
+
 
         xubar = projection(x_temp, c_temp, u_temp, L);
 
@@ -179,10 +201,11 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
         /* Dual variables update */
         for (unsigned int j = 0;j < N; j++) {
 
-            cbar.col(j) = xubar.col(j).head(stateSize);
+            cbar.col(j) = xubar.col(j).segment(stateSize, 2);
             xbar.col(j) = xubar.col(j).head(stateSize);
             ubar.col(j) = xubar.col(j).tail(commandSize);
             // cout << "u_bar[" << j << "]:" << ubar[j].transpose() << endl;
+
 
             c_lambda.col(j) += cnew.col(j) - cbar.col(j);
             x_lambda.col(j) += xnew.col(j) - xbar.col(j);
@@ -201,11 +224,14 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
             // res_ulambda[i] += 0*(ubar.col(j) - ubar_old.col(j)).norm();
         }
 
-        xbar.col(N) = xubar.col(N).head(stateSize);
+        
+
+        xbar.col(N - 1) = xubar.col(N - 1).head(stateSize);
         x_lambda.col(N) += xnew.col(N) - xbar.col(N);
+        
 
         res_x[i] += (xnew.col(N) - xbar.col(N)).norm();
-        res_xlambda[i] += 0*(xbar.col(N) - xbar_old.col(N)).norm();
+        // res_xlambda[i] += 0*(xbar.col(N) - xbar_old.col(N)).norm();
 
         /* ------------------------------- get the cost without augmented Lagrangian terms ------------------------------- */
         cost = 0;
@@ -266,12 +292,11 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
 Projects the states and commands to be within bounds
 
 */
-projStateAndCommandTab_t ADMM::projection(const stateVecTab_t& xnew, const Eigen::MatrixXd& cnew, const commandVecTab_t& unew, const ADMM::Saturation& L) {
+Eigen::MatrixXd ADMM::projection(const stateVecTab_t& xnew, const Eigen::MatrixXd& cnew, const commandVecTab_t& unew, const ADMM::Saturation& L) {
 
-    for(int i = 0;i < NumberofKnotPt + 1; i++) {
+    for(int i = 0;i < NumberofKnotPt ; i++) {
 
-        for (int j = 0;j < stateSize + commandSize; j++) {
-
+        for (int j = 0;j < stateSize + commandSize + 2; j++) {
             if(j < stateSize) { //postion + velocity + force constraints
                 if (xnew(j,i) > L.stateLimits(1, j)) {
                     xubar(j,i) = L.stateLimits(1, j);
@@ -282,30 +307,32 @@ projStateAndCommandTab_t ADMM::projection(const stateVecTab_t& xnew, const Eigen
                 else {
                     xubar(j,i) = xnew(j,i);
                 }
-            } else if((j > stateSize) && (j < (stateSize + 2))) {
-                if((cnew(0, j)) > 0.3 * std::abs(cnew(1, j))) {
-                    xubar(j,i) = 0.3 * std::abs(cnew(1, i));
-                }
+            } else if((j >= stateSize) && (j < (stateSize + 2))) {
+                // std::cout << j << std::endl;
+                // if((cnew(0, j)) > 0.3 * std::abs(cnew(1, j))) {
+                //     xubar(j,i) = 0.3 * std::abs(cnew(1, i));
+                // }
 
             } else { //torque constraints
-                if(unew(j-stateSize-2, i) > L.controlLimits(1, j)) {
-                    xubar(j,i) = L.controlLimits(1, j);
+
+                if(unew(j - stateSize - 2, i) > L.controlLimits(1, j - stateSize - 2)) {
+                    xubar(j, i) = L.controlLimits(1, j - stateSize - 2);
                 }
-                else if(unew(j-stateSize-2,i) < L.controlLimits(0, j)) {
-                    xubar(j,i) = L.controlLimits(1, j);
+                else if(unew(j - stateSize - 2, i) < L.controlLimits(0, j - stateSize - 2)) {
+                    xubar(j, i) = L.controlLimits(0, j - stateSize - 2);
                 }
                 else {
-                    xubar(j,i) = unew(j-stateSize, i);
+                    xubar(j, i) = unew(j-stateSize-2, i);
                 }
             }
 
         }
     }
+    // std::cout << "projection end" << std::endl;
     return xubar;
 }
 
 /* Computes contact terms
-TODO: compute variable RC. make it a structure
 */
 void ADMM::contact_update(std::shared_ptr<KUKAModelKDL>& kukaRobot, const stateVecTab_t& xnew, Eigen::MatrixXd* cnew) {
     double vel = 0.0;
@@ -314,10 +341,13 @@ void ADMM::contact_update(std::shared_ptr<KUKAModelKDL>& kukaRobot, const stateV
 
     Eigen::MatrixXd jacobian(6, 7);
 
+    curve.curvature(X_curve.transpose(), L, R_c, k);
+
     for (int i = 0; i < xnew.cols(); i++) {
+        // TODO: spatialJacobian won't work
         kukaRobot->getSpatialJacobian(const_cast<double*>(xnew.col(i).head(7).data()), jacobian);
         vel = (jacobian * xnew.col(i).segment(6, 7)).norm();
-        (*cnew)(0,i) = m * vel * vel / R;
+        (*cnew)(0,i) = m * vel * vel / R_c(i);
         (*cnew)(1,i) = *(const_cast<double*>(xnew.col(i).tail(1).data()));
     }
 

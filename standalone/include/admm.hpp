@@ -6,9 +6,7 @@
 #include <cmath>
 #include <vector>
 #include <stdio.h>
-#include <fstream>
 #include <string>
-#include <list>
 
 #include <Eigen/Dense>
 
@@ -26,6 +24,9 @@
 #include "IK_solver.hpp"
 #include "kuka_robot.hpp"
 
+#include "curvature.hpp"
+
+
 /* ADMM trajectory generation */
 class ADMM {
 public:
@@ -41,22 +42,6 @@ public:
     Eigen::Matrix<double, 2, commandSize> controlLimits;
   };
 
-  // data structure for IK options
-  struct IKopt {
-    IKopt(int NDOF_) : NDOFS(NDOF_) {
-      joint_limits.resize(2, NDOFS);
-      Slist.resize(6, NDOFS);
-    }
-
-    
-    double ev;
-    double eomg;
-    int NDOFS;
-    Eigen::MatrixXd joint_limits;
-    Eigen::MatrixXd Slist;
-    Eigen::Matrix<double, 4, 4> M;
-    
-  };
 
   // data structure for admm options
   struct ADMMopt {
@@ -70,19 +55,23 @@ public:
     int ADMMiterMax;
   };
   
-  ADMM(const ADMMopt& ADMM_opt);
+  ADMM(const ADMMopt& ADMM_opt, const IKTrajectory<IK_FIRST_ORDER>::IKopt& IK_opt);
 
   // template<class T>
   void run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, const stateVec_t& xinit, const stateVecTab_t& xtrack, 
-    const std::vector<Eigen::MatrixXd>& cartesianTrack, const Eigen::VectorXd& rho, const Saturation& L, const IKopt& IK);
+    const std::vector<Eigen::MatrixXd>& cartesianTrack, const Eigen::VectorXd& rho, const Saturation& L);
 
-  projStateAndCommandTab_t projection(const stateVecTab_t& xnew, const Eigen::MatrixXd& cnew, const commandVecTab_t& unew, const Saturation& L);
+  Eigen::MatrixXd projection(const stateVecTab_t& xnew, const Eigen::MatrixXd& cnew, const commandVecTab_t& unew, const Saturation& L);
   void contact_update(std::shared_ptr<KUKAModelKDL>& kukaRobot, const stateVecTab_t& xnew, Eigen::MatrixXd* cnew);
 
 
 protected:
+  models::KUKA robotIK;
+
+  Curvature curve;
   Saturation projectionLimits;
   ADMMopt ADMM_OPTS;
+  IKTrajectory<IK_FIRST_ORDER>::IKopt IK_OPT;
 
   optimizer::ILQRSolverADMM::traj lastTraj;
   stateVecTab_t joint_state_traj;
@@ -140,6 +129,14 @@ protected:
 
   // joint_positions_IK
   Eigen::MatrixXd joint_positions_IK;
+
+  Eigen::VectorXd L;
+  Eigen::VectorXd R_c;
+  Eigen::MatrixXd k;
+
+  Eigen::MatrixXd X_curve;
+
+  IKTrajectory<IK_FIRST_ORDER> IK_solve;
 
 };
 

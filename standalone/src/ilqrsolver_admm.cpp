@@ -86,7 +86,7 @@ ILQRSolverADMM::ILQRSolverADMM(KukaArm& iiwaDynamicModel, CostFunctionADMM& iiwa
 
 }
 
-void ILQRSolverADMM::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const stateVecTab_t& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar)
+void ILQRSolverADMM::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const Eigen::MatrixXd& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar)
 {
     //==============
     // Checked!!v
@@ -98,7 +98,6 @@ void ILQRSolverADMM::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, co
     Op.dlambda = Op.dlambdaInit;
     
     // TODO: update multipliers 
-
     for (iter = 0; iter < Op.max_iter; iter++)
     {
         //==============
@@ -127,7 +126,6 @@ void ILQRSolverADMM::solve(const stateVec_t& x_0, const commandVecTab_t& u_0, co
             
             /* -------------- compute cx, cu, cxx, cuu ------------ */
             costFunction->computeDerivatives(xList, uListFull, cList_bar, xList_bar, uList_bar);
-
             gettimeofday(&tend_time_deriv,NULL);
             Op.time_derivative(iter) = (static_cast<double>(1000*(tend_time_deriv.tv_sec-tbegin_time_deriv.tv_sec)+((tend_time_deriv.tv_usec-tbegin_time_deriv.tv_usec)/1000)))/1000.0;
 
@@ -344,7 +342,7 @@ void ILQRSolverADMM::initializeTraj(const stateVec_t& x_0, const commandVecTab_t
     if(Op.debug_level > 0) {TRACE("\n =========== begin iLQR =========== \n");}
 }
 
-void ILQRSolverADMM::doForwardPass(const stateVec_t& x_0, const stateVecTab_t& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar)
+void ILQRSolverADMM::doForwardPass(const stateVec_t& x_0, const Eigen::MatrixXd& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar)
 {
 
     updatedxList.col(0) = x_0;
@@ -371,7 +369,7 @@ inline stateVec_t ILQRSolverADMM::forward_integration(const stateVec_t& x, const
     // if(debugging_print) TRACE_KUKA_ARM("update: 4th-order Runge-Kutta step\n");
 
     // gettimeofday(&tbegin_period4, NULL);
-    
+
     stateVec_t x_dot1 = dynamicModel->kuka_arm_dynamics(x, u);
     stateVec_t x_dot2 = dynamicModel->kuka_arm_dynamics(x + 0.5 * dt * x_dot1, u);
     stateVec_t x_dot3 = dynamicModel->kuka_arm_dynamics(x + 0.5 * dt * x_dot2, u);
