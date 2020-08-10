@@ -141,11 +141,12 @@ void DDP::run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
     /*------------------initialize control input----------------------- */
     commandVecTab_t u_0;
     u_0.resize(commandSize, N);
+    u_0.setZero();
 
-    for (unsigned i = 0; i < N; i++)
-    {
-      u_0.col(i).head(7) = gravityTorque;
-    }
+    // for (unsigned i = 0; i < N; i++)
+    // {
+    //   u_0.col(i).head(7) = 0*gravityTorque;
+    // }
 
     // robot model
     KukaArm KukaArmModel(dt, N, kukaRobot, contactModel);
