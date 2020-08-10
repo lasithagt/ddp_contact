@@ -15,21 +15,37 @@ template<class IK_solver>
 class IKTrajectory {
 
 public:
+
+	// data structure for IK options
+	struct IKopt {
+		IKopt(int NDOF_) : NDOFS(NDOF_) {
+			joint_limits.resize(2, NDOFS);
+			Slist.resize(6, NDOFS);
+		}
+
+		double ev;
+		double eomg;
+		int NDOFS;
+		Eigen::MatrixXd joint_limits;
+		Eigen::MatrixXd Slist;
+		Eigen::Matrix<double, 4, 4> M;
+	};
+
 	IKTrajectory() {}
 
 	~IKTrajectory() {}
 
 	IKTrajectory(const Eigen::MatrixXd& S, const Eigen::MatrixXd& M_, const Eigen::MatrixXd& joint_limits,
-	 const double& eomg_, const double& ev_, const Eigen::VectorXd& rho_, const int N) : eomg(eomg_), ev(ev_)
+	 const double& eomg_, const double& ev_, const Eigen::VectorXd& rho, const int N) : eomg(eomg_), ev(ev_)
 	{
 		Slist = S;
 		M     = M_;
-		rho   = rho_;
 
 		N_steps = N + 1;
 
 		// std::vector for SE(3) cartesian poses, desired trajectory
 		FK_current.resize(N_steps);
+		FK_current_pos.resize(3, N_steps);
 
 		// joint space variables q, q_dot
 		thetalist  = Eigen::MatrixXd::Zero(NDOF, N_steps);
@@ -44,7 +60,7 @@ public:
 
 	/* inputs - poses_des, outputs - joint_positions */
 	void getTrajectory(const std::vector<Eigen::MatrixXd>& FK_desired, const Eigen::VectorXd& q0, const Eigen::VectorXd& qd0,
-	 const Eigen::MatrixXd& q_bar, const Eigen::MatrixXd& qd_bar,  Eigen::MatrixXd* joint_positions) {
+	 const Eigen::MatrixXd& q_bar, const Eigen::MatrixXd& qd_bar, const Eigen::VectorXd& rho,  Eigen::MatrixXd* joint_positions) {
 
 	    // thetalist.col(0)  = q0;
 	    // thetalistd.col(0) = qd0;
@@ -80,17 +96,15 @@ public:
 	        	}
 
 	            /* solves IK for each time step */
-	            IK.getIK(FK_desired.at(i), thetalist0, thetalistd0, q_bar.col(i), qd_bar.col(i), initial, &thetalist_ret);
+	            IK.getIK(FK_desired.at(i), thetalist0, thetalistd0, q_bar.col(i), qd_bar.col(i), initial, rho, &thetalist_ret);
 
 	            joint_positions->col(i) = thetalist_ret;
 	            FK_current.at(i) = mr::FKinSpace(M, Slist, joint_positions->col(i));
+	            FK_current_pos.col(i) = FK_current.at(i).block(0, 3, 3, 1);
 
-	            // thetalist0   = joint_positions->col(i);
-	            // thetalistd0  = thetalistd.col(i);
 	        }  
 
 	        cost = trajectoryCost(FK_desired);
-	        // std::cout << cost << std::endl;
 	        j++;
 	    }
 	}
@@ -115,14 +129,11 @@ public:
 
 	}
 
-	/* return the current fk cost */
-	double trajectoryCost(const std::vector<Eigen::MatrixXd>& FK_desired) {
-		double cost = 0;
-		for (int i = 0; i < N_steps; i++) {
-			// std::cout << FK_current.at(i) << std::endl;
-			cost = cost + (FK_desired.at(i) - FK_current.at(i)).norm();
-		}
-		return cost;
+
+
+	// returns current FK.
+	inline Eigen::MatrixXd getFKCurrentPos() {
+		return FK_current_pos;
 	}
 
 	/* Terminate condition */
@@ -133,17 +144,28 @@ public:
 		return 0;
 	}
 
+private:
+	/* return the current fk cost */
+	double trajectoryCost(const std::vector<Eigen::MatrixXd>& FK_desired) {
+		double cost = 0;
+		for (int i = 0; i < N_steps; i++) {
+			// std::cout << FK_current.at(i) << std::endl;
+			cost = cost + (FK_desired.at(i) - FK_current.at(i)).norm();
+		}
+		return cost;
+	}
+
 public:
 	double eomg;
 	double ev;
 	Eigen::MatrixXd Slist;
 	Eigen::MatrixXd M;
-	Eigen::VectorXd rho;
 
 	Eigen::MatrixXd thetalist;
 	Eigen::MatrixXd thetalistd;
 
 	std::vector<Eigen::MatrixXd> FK_current;
+	Eigen::MatrixXd FK_current_pos;
 
 	std::function<int(double, int)> is_terminate;
 

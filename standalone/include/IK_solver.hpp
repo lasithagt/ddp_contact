@@ -14,7 +14,8 @@ public:
 	~IK() = default;
 
 	/* Get IK solution given the Td and initial thetalist */
-	virtual void getIK(const Eigen::MatrixXd& Td, const Eigen::VectorXd& thetalist0, const Eigen::VectorXd& thetalistd0, const Eigen::VectorXd& q_bar, const Eigen::VectorXd& qd_bar, bool initial, Eigen::VectorXd* thetalist) = 0;
+	virtual void getIK(const Eigen::MatrixXd& Td, const Eigen::VectorXd& thetalist0, const Eigen::VectorXd& thetalistd0, const Eigen::VectorXd& q_bar, const Eigen::VectorXd& qd_bar,
+	 bool initial, const Eigen::VectorXd& rho, Eigen::VectorXd* thetalist) = 0;
 
 private:
 	/* Null space projection */
@@ -39,7 +40,8 @@ public:
 
 	IK_FIRST_ORDER(const Eigen::MatrixXd& Slist, const Eigen::MatrixXd& M, const Eigen::MatrixXd& joint_limits, const double& eomg, const double& ev, const Eigen::VectorXd& rho);
 
-	void getIK(const Eigen::MatrixXd& Td, const Eigen::VectorXd& thetalist0, const Eigen::VectorXd& thetalistd0, const Eigen::VectorXd& q_bar, const Eigen::VectorXd& qd_bar, bool initial, Eigen::VectorXd* thetalist);
+	void getIK(const Eigen::MatrixXd& Td, const Eigen::VectorXd& thetalist0, const Eigen::VectorXd& thetalistd0, const Eigen::VectorXd& q_bar, const Eigen::VectorXd& qd_bar, 
+		bool initial, const Eigen::VectorXd& rho, Eigen::VectorXd* thetalist);
 	
 	void getRedundancyResolution(const Eigen::VectorXd& thetalist, Eigen::VectorXd* q_grad_ret);
 	
