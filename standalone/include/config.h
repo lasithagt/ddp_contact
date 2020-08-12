@@ -17,6 +17,7 @@
 #define WHOLE_BODY 1
 #define CARTESIAN_FRAME 10
 #define SOFT_CONTACT 1
+#define CONTACT_EN 1
 
 #define MULTI_THREAD 0
 #if MULTI_THREAD
@@ -28,6 +29,7 @@
 #define stateSize 17 
 #define commandSize 7 
 #define fullstatecommandSize 24
+#define NDOF 7
 #else
 #define stateSize 14
 #define commandSize 7
