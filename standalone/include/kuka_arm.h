@@ -79,8 +79,6 @@ class KukaArm
 
 
 protected:
-    unsigned int stateNb;
-    unsigned int commandNb;
     commandVec_t lowerCommandBounds;
     commandVec_t upperCommandBounds;
 
@@ -92,7 +90,7 @@ protected:
 
 private:
     double dt;
-    unsigned int N;
+    int N;
     bool initial_phase_flag_;
     struct timeprofile finalTimeProfile;
     struct timeval tbegin_period, tend_period, tbegin_period4, tend_period4; //tbegin_period2, tend_period2, tbegin_period3, tend_period3, 
@@ -105,21 +103,17 @@ public:
 private:
     
     ContactModel::SoftContactModel* contact_model0;
-    stateMat_half_t H, C; // inertial, corillois dynamics
-    stateVec_half_t G; // gravity? what is this?
     stateR_half_commandC_t Bu; //input mapping
-    stateVec_t Xdot_new;
+    stateVec_t xdot_new;
     stateVec_half_t vd;
     stateVecTab_half_t vd_thread;
     stateVecTab_t Xdot_new_thread;
 
-    
-    // std::unique_ptr<KUKAModelKDL> kukaRobot_;
-
-    Eigen::VectorXd q;
-    Eigen::VectorXd qd;
-    Eigen::VectorXd qdd;
-    Eigen::Vector3d force_current;
+    Eigen::VectorXd q, qd, qdd, tau_ext;
+    Eigen::Vector3d force_current, accel, vel, poseP;
+    Eigen::Matrix<double,3,3> poseM;
+    Eigen::Matrix3d H_c;
+    Eigen::MatrixXd manip_jacobian;
 
     std::vector<Eigen::VectorXd> q_thread, qd_thread;
     bool debugging_print;
@@ -138,8 +132,6 @@ public:
     void compute_dynamics_jacobian(const stateVecTab_t& xList, const commandVecTab_t& uList);
     struct timeprofile getFinalTimeProfile();
 
-    unsigned int getStateNb();
-    unsigned int getCommandNb();
     commandVec_t& getLowerCommandBounds();
     commandVec_t& getUpperCommandBounds();
     stateMatTab_t& getfxList();

@@ -20,8 +20,8 @@
 #include "cost_function_admm.h"
 
 #include "modern_robotics.h"
-#include "IKTrajectory.hpp"
-#include "IK_solver.hpp"
+#include "ik_trajectory.hpp"
+#include "ik_solver.hpp"
 #include "kuka_robot.hpp"
 
 #include "curvature.hpp"
@@ -85,18 +85,18 @@ protected:
 
   // primal parameters
   stateVecTab_t xnew;
+  Eigen::MatrixXd qnew;
   Eigen::MatrixXd cnew;
   commandVecTab_t unew;
 
-  stateVecTab_t x_avg;
+  // stateVecTab_t x_avg;
+  Eigen::MatrixXd q_avg;
   stateVecTab_t x_lambda_avg;
-
-  Eigen::MatrixXd q_lambda;
-  Eigen::MatrixXd qd_lambda;
 
   stateVecTab_t xbar;
   Eigen::MatrixXd cbar;
   commandVecTab_t ubar;
+  Eigen::MatrixXd qbar;
 
   stateVecTab_t xbar_old; // "old" for last ADMM iteration 
   Eigen::MatrixXd cbar_old;
@@ -106,10 +106,12 @@ protected:
   stateVecTab_t x_lambda;
   Eigen::MatrixXd c_lambda;
   commandVecTab_t u_lambda;
+  Eigen::MatrixXd q_lambda;
 
   stateVecTab_t x_temp;
   Eigen::MatrixXd c_temp;
   commandVecTab_t u_temp;
+  Eigen::MatrixXd q_temp;
 
   commandVecTab_t u_0;;
 
@@ -117,11 +119,13 @@ protected:
 
   // primal residual
   std::vector<double> res_x;
+  std::vector<double> res_q;
   std::vector<double> res_u;
   std::vector<double> res_c;
 
   // dual residual
   std::vector<double> res_xlambda;
+  std::vector<double> res_qlambda;
   std::vector<double> res_ulambda;
   std::vector<double> res_clambda;
 

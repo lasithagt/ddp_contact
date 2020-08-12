@@ -29,9 +29,9 @@ public:
         Eigen::VectorXd xf_w(stateSize);
         Eigen::VectorXd u_w(commandSize);
 
-        x_w << 1000, 1000, 1000, 1000, 1000, 1000, 1000, 100, 100, 100, 100, 100, 100, 100, 0, 0, 0;
-        xf_w << 100000, 100000, 100000, 100000, 100000, 100000, 100000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 0, 0, 0;
-        u_w << 0.005, 0.005, 0.007, 0.007, 0.02, 0.02, 0.05;
+        x_w  << 4000, 4000, 4000, 4000, 4000, 4000, 4000, 100, 100, 100, 100, 100, 100, 100, 0, 0, 0;
+        xf_w << 1000, 1000, 1000, 1000, 1000, 1000, 1000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 0, 0, 0;
+        u_w  << 0.05, 0.05, 0.07, 0.07, 0.02, 0.02, 0.05;
 
         
         Q  = x_w.asDiagonal();
@@ -51,21 +51,20 @@ public:
     /* return the cost regular quadratic cost*/
     scalar_t cost_func_expre(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k)
     {
-
         scalar_t cost_;
         unsigned int Nl = NumberofKnotPt;
 
         if (index_k == Nl)
         {
-            cost_ = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Qf * (xList_k - x_track_.col(index_k));
+            cost_  = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Qf * (xList_k - x_track_.col(index_k));
         }
         else
         {
-            cost_ = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Q * (xList_k - x_track_.col(index_k));
+            cost_  = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Q * (xList_k - x_track_.col(index_k));
             cost_ += 0.5 * uList_k.transpose() * R * uList_k;
         }
-        return cost_;
 
+        return cost_;
     }
 
 
@@ -83,7 +82,7 @@ public:
         {
 
             // Analytical derivatives given quadratic cost
-            cx_new.col(k) = Q * xList.col(k);
+            cx_new.col(k) = Q * (xList.col(k) - x_track_.col(k));
             cu_new.col(k) = R * uList.col(k);
 
             cxx_new[k] = Q;

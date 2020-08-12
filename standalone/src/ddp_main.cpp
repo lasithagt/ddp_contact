@@ -22,20 +22,20 @@ int main(int argc, char *argv[])
 
   // The trajectory of contact force to be tracked
   xtrack.setZero();
- 
+  xtrack.col(NumberofKnotPt) = xgoal;
+  xtrack = xgoal.replicate(1, NumberofKnotPt + 1);
 
   KUKAModelKDLInternalData robotParams;
   robotParams.numJoints = 7;
   robotParams.Kv = Eigen::MatrixXd(7,7);
   robotParams.Kp = Eigen::MatrixXd(7,7);
 
-  /* initialize xinit, xgoal, xtrack - for the hozizon*/
+  /* initialize xinit, xgoal, xtrack - for the hozizon */
   KDL::Chain robot = KDL::KukaDHKdl();
   std::shared_ptr<KUKAModelKDL> kukaRobot = std::shared_ptr<KUKAModelKDL>(new KUKAModelKDL(robot, robotParams));
 
-  /* initialize xinit, xgoal, xtrack - for the hozizon*/
+  /* initialize xinit, xgoal, xtrack - for the hozizon */
 	optimizer.run(xinit, xgoal, xtrack);
-
 
 
   // TODO : saving data file

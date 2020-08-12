@@ -22,15 +22,16 @@ public:
     CostFunctionADMM() = default;
     ~CostFunctionADMM() = default;
 
-    CostFunctionADMM(const stateVec_t &x_goal, const stateVecTab_t &x_track, const Eigen::VectorXd& rho) : x_track_(x_track) {
+    CostFunctionADMM(const stateVec_t &x_goal, const stateVecTab_t &x_track) : x_track_(x_track) {
 
         Eigen::VectorXd x_w(stateSize);
         Eigen::VectorXd xf_w(stateSize);
         Eigen::VectorXd u_w(commandSize);
 
-        x_w << 1000, 1000, 1000, 1000, 1000, 1000, 1000, 100, 100, 100, 100, 100, 100, 100, 0, 0, 0;
-        xf_w << 100000, 100000, 100000, 100000, 100000, 100000, 100000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 0, 0, 0;
-        u_w << 0.005, 0.005, 0.007, 0.007, 0.02, 0.02, 0.05;
+        // for consensus admm
+        x_w  << 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0, 0, 0.05;
+        xf_w << 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0, 0, 0.05;
+        u_w  << 5E-10, 5E-10, 5E-10, 5E-10, 5E-10, 5E-10, 5E-10;
 
         
         Q  = x_w.asDiagonal();
@@ -67,26 +68,34 @@ public:
     }
 
     /* return the cost with admm */
-    scalar_t cost_func_expre_admm(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k, const Eigen::MatrixXd& cList_bar, const stateVec_t& xList_bar, const commandVec_t& uList_bar)
+    scalar_t cost_func_expre_admm(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k,
+     const Eigen::MatrixXd& cList_bar, const stateVec_t& xList_bar, const commandVec_t& uList_bar, const Eigen::VectorXd& thetaList_bar, const Eigen::VectorXd& rho)
     {
         scalar_t cost_;
         unsigned int Nl = NumberofKnotPt;
 
         if (index_k == Nl)
         {
-            cost_ = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Qf * (xList_k - x_track_.col(index_k));
+            cost_ = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Qf * (xList_k - x_track_.col(index_k)); 
+            cost_ += 0.5 * rho(0) * (xList_k.head(7).transpose() - xList_bar.head(7).transpose()) * (xList_k - xList_bar).head(7);
+            cost_ += 0.5 * rho(2) * (xList_k.segment(7,2).transpose() - cList_bar.transpose()) * (xList_k.segment(7,2) - cList_bar);
+            // cost_ += 0.5 * rho(2) * 
         }
         else
         {
             cost_ = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Q * (xList_k - x_track_.col(index_k));
-            cost_ += 0.5 * uList_k.transpose() * R * uList_k;
-        }
+            cost_ += 0.5 * rho(0) * (xList_k.head(7).transpose() - xList_bar.head(7).transpose()) * (xList_k - xList_bar).head(7);
+            cost_ += 0.5 * rho(2) * (xList_k.segment(7,2).transpose() - cList_bar.transpose()) * (xList_k.segment(7,2) - cList_bar);
+            cost_ += 0.5 * uList_k.transpose() * R * uList_k; 
+            cost_ += 0.5 * rho(1) * (uList_k.transpose() - uList_bar.transpose()) * (uList_k - uList_bar);
+       }
         return cost_;
 
     }
 
     /* compute derivatives */
-    void computeDerivatives(const stateVecTab_t& xList, const commandVecTab_t& uList, const Eigen::MatrixXd& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar)
+    void computeDerivatives(const stateVecTab_t& xList, const commandVecTab_t& uList, 
+        const Eigen::MatrixXd& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar, const Eigen::MatrixXd& thetaList_bar, const Eigen::VectorXd& rho)
     {
         // TODO : get the state size from the dynamics class
         unsigned int Nl = xList.cols();
@@ -99,12 +108,10 @@ public:
         {
 
             // Analytical derivatives given quadratic cost
-            cx_new.col(k) = Q * xList.col(k);
-            cu_new.col(k) = R * uList.col(k);
+            cx_new.col(k) = Q * xList.col(k);// + rho(0) * (xList_bar.col(k) - xList.col(k));
+            cu_new.col(k) = R * uList.col(k);// + rho(1) * (uList_bar.col(k) - uList.col(k));
 
             cxx_new[k] = Q;
-
-            // costFunction->getcux()[k].setZero();
             cuu_new[k] = R; 
 
             //Note that cu , cux and cuu at the final time step will never be used (see ilqrsolver::doBackwardPass)

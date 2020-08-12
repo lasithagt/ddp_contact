@@ -34,9 +34,9 @@ void DDP::run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
 
     double dt = TimeStep;
     unsigned int N = NumberofKnotPt;
-    double tolFun = 1e-5; // 1e-5;//relaxing default value: 1e-10; - reduction exit crieria
+    double tolFun = 1e-7; // 1e-5;//relaxing default value: 1e-10; - reduction exit crieria
     double tolGrad = 1e-10; // relaxing default value: 1e-10; - gradient exit criteria
-    unsigned int iterMax = 10; // 100;
+    unsigned int iterMax = 50; // 100;
 
 
     /* -------------------- orocos kdl robot initialization-------------------------*/
