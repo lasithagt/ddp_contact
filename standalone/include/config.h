@@ -17,7 +17,7 @@
 #define WHOLE_BODY 1
 #define CARTESIAN_FRAME 10
 #define SOFT_CONTACT 1
-#define CONTACT_EN 1
+#define CONTACT_EN 0
 
 #define MULTI_THREAD 0
 #if MULTI_THREAD
@@ -36,8 +36,8 @@
 #define fullstatecommandSize 21
 #endif
 
-#define TimeHorizon 1
-#define TimeStep 0.02
+#define TimeHorizon 2
+#define TimeStep 0.01
 #define NumberofKnotPt TimeHorizon / TimeStep
 #define InterpolationScale 10 
 const int32_t kNumJoints = 7;
