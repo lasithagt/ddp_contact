@@ -90,7 +90,7 @@ public:
             cost_ += 0.5 * uList_k.transpose() * R * uList_k; 
             cost_ += 0.5 * rho(1) * (uList_k.transpose() - uList_bar.transpose()) * (uList_k - uList_bar);
        }
-        // std::cout << cost_ << std::endl;
+        std::cout << cost_ << std::endl;
         return cost_;
 
     }

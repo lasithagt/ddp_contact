@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
   xtrack.resize(stateSize, NumberofKnotPt + 1);
 
   xinit << 0, 0.5, 0, 1.0, 0, 0.5, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0;
-  xgoal << 1.14, 1.93, -1.48, -1.78, 0.31, 0.13, 1.63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+  xgoal << 1.14, 1.93, -1.48, -1.78, 0.31, 0.13, 1.63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1;
 
 
   KUKAModelKDLInternalData robotParams;

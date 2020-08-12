@@ -17,8 +17,8 @@ int main(int argc, char *argv[])
   stateVecTab_t xtrack;
   xtrack.resize(stateSize, NumberofKnotPt + 1);
 
-  xinit << 0, 0.5, 0, 1.0, 0, 0.5, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0;
-  xgoal << 1.14, 1.93, -1.48, -1.78, 0.31, 0.13, 1.63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1;
+  xinit << M_PI/4, 0.5, M_PI/5, 1.0, 0, 0.5, 0, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0, 0, 0;
+  xgoal << 1.14, 1.93, -1.48, -1.78, 0.31, 0.13, 1.63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
 
   // The trajectory of contact force to be tracked
   xtrack.setZero();
@@ -33,6 +33,9 @@ int main(int argc, char *argv[])
   /* initialize xinit, xgoal, xtrack - for the hozizon */
   KDL::Chain robot = KDL::KukaDHKdl();
   std::shared_ptr<KUKAModelKDL> kukaRobot = std::shared_ptr<KUKAModelKDL>(new KUKAModelKDL(robot, robotParams));
+
+  // kukaRobot->getForwardKinematics(double* q, double* qd, double *qdd, Eigen::Matrix<double,3,3>& poseM, Eigen::Vector3d& poseP, Eigen::Vector3d& vel, Eigen::Vector3d& accel, false);
+
 
   /* initialize xinit, xgoal, xtrack - for the hozizon */
 	optimizer.run(xinit, xgoal, xtrack);

@@ -192,7 +192,7 @@ void ILQRSolverADMM::solve(const stateVec_t& x_0, const commandVecTab_t& u_0,
                 }
                 else 
                 {
-                    z = static_cast<double>(-signbit(Op.dcost)); //[TODO:doublecheck]
+                    z = static_cast<double>(-signbit(Op.dcost)); // [TODO:doublecheck]
                     TRACE("non-positive expected reduction: should not occur \n"); //warning
                 }
                 if(z > Op.zMin)

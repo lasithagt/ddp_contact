@@ -84,7 +84,7 @@ void KUKAModelKDL::getForwardDynamics(double* q, double* qd, const Eigen::Vector
     Eigen::LLT<Eigen::Ref<Eigen::MatrixXd> > llt(inertia_mat_.data); // Do LU decomposition. This is faster than the SVD approach.
 
 
-    qdd = std::move(llt.solve(force_ext -robotParams_.Kv * qd_.data - coriolis_.data - 0 * gravity_.data)); 
+    qdd = std::move(llt.solve(force_ext - robotParams_.Kv * qd_.data - coriolis_.data - 0 * gravity_.data)); 
 
     // TODO: Not working, seems faster though
     // KDL::ChainFdSolver_RNE fdSolver(robotChain_, KDL::Vector(0,0,9.8));

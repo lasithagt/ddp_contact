@@ -69,19 +69,13 @@ void df(const Eigen::Matrix3d& mass_matrix_cart, const Eigen::Vector3d& position
    Eigen::Vector3d spring_dir;
    spring_dir << 0, 0, 1;
 
-   // std::cout << "Spring Direction\n" << spring_dir.transpose() << std::endl;
-   // std::cout << "Current Force\n" << force_current.transpose() << std::endl;
-   // std::cout << "Velocity\n" << velocity.transpose() << std::endl;
-   // std::cout << "Acceleration\n" << acceleration.transpose() << std::endl;
+
 
    // the force component in the direction of spring_dir, projection to spring direction
    Eigen::Vector3d force_z        = (force_current.dot(spring_dir) / spring_dir.norm()) * spring_dir;
    Eigen::Vector3d velocity_z     = (velocity.dot(spring_dir) /  spring_dir.norm()) * spring_dir;
    Eigen::Vector3d acceleration_z = (acceleration.dot(spring_dir) /  spring_dir.norm()) * spring_dir;
 
-   // std::cout << "Force_Z\n" << force_z.transpose() << std::endl;
-   // std::cout << "Velocity_Z\n" << velocity_z.transpose() << std::endl;
-   // std::cout << "Acceleration_Z\n" << acceleration_z.transpose() << std::endl;
 
    // surface deformation resulting from force_z, dx in the direction of spring_dir. Using the quasi static model. 
    double d = pow(9 * pow(force_z.norm(), 2) / (16 * pow(cp_.E,2) * cp_.R), 1/3);
@@ -110,9 +104,7 @@ void df(const Eigen::Matrix3d& mass_matrix_cart, const Eigen::Vector3d& position
 
    /* -------------- End - Orthogonal force calculation -------------- */
 
-   // std::cout << F_f_dot << std::endl;
-   // std::cout << F_n_dot << std::endl;
-   // std::cout << F_normal_dot << std::endl;
+
 
    force_next = F_f_dot - F_n_dot + 0*F_normal_dot;
    // Eigen::Vector3d temp_test;

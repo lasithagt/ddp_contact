@@ -78,6 +78,32 @@ int main() {
 
 	std::cout << costFunction.cost_func_expre(0, x, u) << std::endl;
 
+	stateVecTab_t xList;
+	xList.resize(stateSize, 1);
+	xList.col(0) = x;
+
+	commandVecTab_t uList;
+	uList.resize(commandSize, 1);
+	uList.col(0) = u;
+
+	Eigen::MatrixXd cList_bar;
+	cList_bar.resize(2,1);
+
+	stateVecTab_t xList_bar;
+	xList_bar.resize(stateSize, 1);
+
+	commandVecTab_t uList_bar;
+	uList_bar.resize(commandSize, 1);
+
+	Eigen::MatrixXd thetaList_bar;
+	thetaList_bar.resize(7,1);
+
+	Eigen::VectorXd rho(5);
+	rho << 1,2,3,0,4;
+
+
+	costFunction.computeDerivatives(xList, uList, cList_bar, xList_bar, uList_bar, thetaList_bar, rho);
+
 
 	// // ----------------------------------------------------------------------------------------------------------
 
