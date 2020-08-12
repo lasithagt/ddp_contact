@@ -78,7 +78,7 @@ install (TARGETS ModernRoboticsCpp
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
 
-add_library(ik-solvers STATIC ./src/IK_solver.cpp ./include/IK_solver.hpp ./include/IKTrajectory.hpp)
+add_library(ik-solvers STATIC ./src/ik_solver.cpp ./include/ik_solver.hpp ./include/ik_trajectory.hpp)
 target_include_directories(ik-solvers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobotics/include/)
 target_link_libraries(ik-solvers ModernRoboticsCpp)
 
@@ -107,8 +107,10 @@ target_include_directories(ik-test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobo
 target_link_libraries(ik-test ModernRoboticsCpp ik-solvers)
 
 
-add_executable(curvature-test src/test_curvature.cpp)
-target_include_directories(curvature-test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# test scripts
+add_executable(test src/test.cpp)
+target_include_directories(test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(test ModernRoboticsCpp ik-solvers orocos-kdl kuka-models ddp-solver)
 
 
 #add_executable(l ${LIB_TEST_SOURCES})
