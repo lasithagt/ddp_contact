@@ -108,9 +108,9 @@ target_link_libraries(ik-test ModernRoboticsCpp ik-solvers)
 
 
 # test scripts
-add_executable(test src/test.cpp)
-target_include_directories(test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(test ModernRoboticsCpp ik-solvers orocos-kdl kuka-models ddp-solver)
+add_executable(test_cases src/test.cpp)
+target_include_directories(test_cases PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_link_libraries(test_cases ModernRoboticsCpp ik-solvers orocos-kdl kuka-models ddp-solver)
 
 
 #add_executable(l ${LIB_TEST_SOURCES})
