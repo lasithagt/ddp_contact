@@ -18,8 +18,8 @@ ILQRSolver::ILQRSolver(KukaArm& iiwaDynamicModel, CostFunction& iiwaCostFunction
 
     dynamicModel  = &iiwaDynamicModel;
     costFunction  = &iiwaCostFunction;
-    stateNb       = iiwaDynamicModel.getStateNb();
-    commandNb     = iiwaDynamicModel.getCommandNb();
+    // stateNb       = iiwaDynamicModel.getStateNb();
+    // commandNb     = iiwaDynamicModel.getCommandNb();
     enableQPBox   = QPBox;
     enableFullDDP = fullDDP;
 

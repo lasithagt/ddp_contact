@@ -2,8 +2,8 @@
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include "modern_robotics.h"
-#include "IKTrajectory.hpp"
-#include "IK_solver.hpp"
+#include "ik_trajectory.hpp"
+#include "ik_solver.hpp"
 #include "kuka_robot.hpp"
 #include <chrono>
 #include <ctime>
@@ -12,7 +12,6 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, 1> newType;
 
 
 int main() {
-
 
 	// random testing
 	newType a(10);

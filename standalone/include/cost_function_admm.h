@@ -77,15 +77,15 @@ public:
         if (index_k == Nl)
         {
             cost_ = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Qf * (xList_k - x_track_.col(index_k)); 
-            cost_ += 0.5 * rho(0) * (xList_k.head(7).transpose() - xList_bar.head(7).transpose()) * (xList_k - xList_bar).head(7);
-            cost_ += 0.5 * rho(2) * (xList_k.segment(7,2).transpose() - cList_bar.transpose()) * (xList_k.segment(7,2) - cList_bar);
-            // cost_ += 0.5 * rho(2) * 
+
         }
         else
         {
             cost_ = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Q * (xList_k - x_track_.col(index_k));
             cost_ += 0.5 * rho(0) * (xList_k.head(7).transpose() - xList_bar.head(7).transpose()) * (xList_k - xList_bar).head(7);
-            cost_ += 0.5 * rho(2) * (xList_k.segment(7,2).transpose() - cList_bar.transpose()) * (xList_k.segment(7,2) - cList_bar);
+            // cost_ += 0.5 * rho(2) * (xList_k.segment(7,2).transpose() - cList_bar.transpose()) * (xList_k.segment(7,2) - cList_bar);
+            cost_ += 0.5 * rho(4) * (xList_k.head(7).transpose() - thetaList_bar.transpose()) * (xList_k.head(7) - thetaList_bar);
+
             cost_ += 0.5 * uList_k.transpose() * R * uList_k; 
             cost_ += 0.5 * rho(1) * (uList_k.transpose() - uList_bar.transpose()) * (uList_k - uList_bar);
        }
@@ -103,23 +103,30 @@ public:
         unsigned int n = stateSize;
         unsigned int m = commandSize;
 
+        Eigen::DiagonalMatrix<double, stateSize> m_(rho(0), rho(0), rho(0), rho(0), rho(0), rho(0), rho(0), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        // std::cout << m_ <<std::endl;
+        Eigen::DiagonalMatrix<double, stateSize> n_(rho(4), rho(4), rho(4), rho(4), rho(4), rho(4), rho(4), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+        Eigen::VectorXd temp(stateSize);
 
-        for (unsigned int k = 0; k < Nl; k++)
+        for (unsigned int k = 0; k < Nl - 1; k++)
         {
-
             // Analytical derivatives given quadratic cost
-            cx_new.col(k) = Q * xList.col(k);// + rho(0) * (xList_bar.col(k) - xList.col(k));
-            cu_new.col(k) = R * uList.col(k);// + rho(1) * (uList_bar.col(k) - uList.col(k));
+            temp.head(7)  = (xList.col(k).head(7) - thetaList_bar.col(k));
+            cx_new.col(k) = Q * xList.col(k) + m_ * (xList.col(k) - xList_bar.col(k)) + n_ *  temp;
+            cu_new.col(k) = R * uList.col(k) + rho(1) * (uList.col(k) - uList_bar.col(k));
 
-            cxx_new[k] = Q;
-            cuu_new[k] = R; 
+            cxx_new[k] = Q ;// + rho(4) * Eigen::MatrixXd::Identity(7, 7);
+            cuu_new[k] = R + rho(1) * Eigen::MatrixXd::Identity(7, 7); 
 
             //Note that cu , cux and cuu at the final time step will never be used (see ilqrsolver::doBackwardPass)
             cux_new[k].setZero();
         } 
 
+        temp.head(7)     = (xList.col(Nl-1).head(7) - thetaList_bar.col(Nl-1));
+        cx_new.col(Nl-1) = Q * xList.col(Nl-1) + m_ * (xList.col(Nl-1) - xList_bar.col(Nl-1)) + n_ *  temp; // + rho(0) * (xList.col(Nl) - xList_bar.col(Nl));
+        // cuu_new[Nl-1]    = R ; //+ rho(1) * Eigen::MatrixXd::Identity(7, 7); 
 
-        c_new = 0;
+        c_new = 0; // TODO: move this to somewhere.
     }
 
 	const Eigen::Matrix<double,6,6>& getT() const {return T;};
