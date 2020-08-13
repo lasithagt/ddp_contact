@@ -49,18 +49,18 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${OROCOS_KDL_INCLUDE_DIR
 
 message(STATUS ${OROCOS_KDL_INCLUDE_DIR})
 
-add_library(kuka-models STATIC)
+add_library(kuka-models)
 target_include_directories(kuka-models PUBLIC include)
 set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/KukaModel.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/models.cc)
 target_sources(kuka-models PUBLIC ${SOURCES})
 
-add_library(ddp-solver STATIC)
+add_library(ddp-solver)
 target_include_directories(ddp-solver PUBLIC include)
 set(SOURCES_DDP ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/kuka_arm.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/ddp.cpp)
 target_link_libraries(ddp-solver PUBLIC kuka-models)
 target_sources(ddp-solver PUBLIC ${SOURCES_DDP})
 
-add_library(ddp-admm-solver STATIC)
+add_library(ddp-admm-solver)
 target_include_directories(ddp-admm-solver PUBLIC include ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobotics/include/)
 set(SOURCES_DDP_ADMM ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver_admm.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/kuka_arm.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/admm.cpp)
 target_link_libraries(ddp-admm-solver PUBLIC kuka-models)
