@@ -29,9 +29,9 @@ public:
         Eigen::VectorXd u_w(commandSize);
 
         // for consensus admm
-        x_w  << 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0, 0, 0.05;
-        xf_w << 0, 0, 0, 0, 0, 0, 0, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0.0001, 0, 0, 0.05;
-        u_w  << 5E-10, 5E-10, 5E-10, 5E-10, 5E-10, 5E-10, 5E-10;
+        x_w  << 0, 0, 0, 0, 0, 0, 0, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0, 0, 0.05;
+        xf_w << 0, 0, 0, 0, 0, 0, 0, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0, 0, 0.05;
+        u_w  << 1E-2, 1E-2, 1E-2, 1E-2, 1E-2, 1E-2, 1E-2;
 
         
         Q  = x_w.asDiagonal();
@@ -48,7 +48,7 @@ public:
 
     }
 
-    /* return the cost with admm */
+    /* return the cost without admm terms */
     scalar_t cost_func_expre(const unsigned int& index_k, const stateVec_t& xList_k, const commandVec_t& uList_k)
     {
         scalar_t cost_;
@@ -74,15 +74,15 @@ public:
         scalar_t cost_;
         unsigned int Nl = NumberofKnotPt;
 
-        if (index_k == Nl)
+        if (index_k == Nl) 
         {
             cost_ = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Qf * (xList_k - x_track_.col(index_k)); 
+            cost_ += 0.5 * rho(4) * (xList_k.head(7).transpose() - thetaList_bar.transpose()) * (xList_k.head(7) - thetaList_bar);
 
-        }
-        else
-        {
+        } else {
             cost_ = 0.5 * (xList_k.transpose() - x_track_.col(index_k).transpose()) * Q * (xList_k - x_track_.col(index_k));
             cost_ += 0.5 * rho(0) * (xList_k.head(7).transpose() - xList_bar.head(7).transpose()) * (xList_k - xList_bar).head(7);
+            
             // TODO: contact cost term
             // cost_ += 0.5 * rho(2) * (xList_k.segment(7,2).transpose() - cList_bar.transpose()) * (xList_k.segment(7,2) - cList_bar);
             cost_ += 0.5 * rho(4) * (xList_k.head(7).transpose() - thetaList_bar.transpose()) * (xList_k.head(7) - thetaList_bar);
@@ -90,7 +90,7 @@ public:
             cost_ += 0.5 * uList_k.transpose() * R * uList_k; 
             cost_ += 0.5 * rho(1) * (uList_k.transpose() - uList_bar.transpose()) * (uList_k - uList_bar);
        }
-        std::cout << cost_ << std::endl;
+        // std::cout << cost_ << std::endl;
         return cost_;
 
     }
@@ -133,7 +133,7 @@ public:
         cxx_new[Nl-1] += n_;
         // cuu_new[Nl-1]    = R ; //+ rho(1) * Eigen::MatrixXd::Identity(7, 7); 
 
-        c_new = 0; // TODO: move this to somewhere.
+        // c_new = 0; // TODO: move this to somewhere.
     }
 
 	const Eigen::Matrix<double,6,6>& getT() const {return T;};

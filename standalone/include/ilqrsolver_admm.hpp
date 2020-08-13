@@ -78,7 +78,7 @@ public:
         Eigen::VectorXd time_backward, time_forward, time_derivative;
         Eigen::VectorXd alphaList;
 
-        OptSet() : debug_level(2), n_alpha(11), lambdaMin(1e-6), lambdaMax(1e10), lambdaInit(1), dlambdaInit(1), lambdaFactor(1.6), max_iter(500), 
+        OptSet() : debug_level(2), n_alpha(11), lambdaMin(1e-6), lambdaMax(1e10), lambdaInit(1), dlambdaInit(1), lambdaFactor(1.3), max_iter(500), 
                     tolGrad(1e-4), tolFun(1e-4), tolConstraint(1e-7), zMin(0.0), regType(1), print(2) {}
 
     };
@@ -154,7 +154,8 @@ public:
     ILQRSolverADMM(KukaArm& DynamicModel, CostFunctionADMM& Cost, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox);
     void solve(const stateVec_t& x_0, const commandVecTab_t& u_0, const Eigen::MatrixXd& cList_bar, 
         const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar, const Eigen::MatrixXd& thetaList_bar, const Eigen::VectorXd& rho);
-    void initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0);
+    void initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0, const Eigen::MatrixXd& cList_bar, const stateVecTab_t& xList_bar,
+     const commandVecTab_t& uList_bar, const Eigen::MatrixXd& thetaList_bar, const Eigen::VectorXd& rho);
     struct traj getLastSolvedTrajectory();
 
 private:
