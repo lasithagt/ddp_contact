@@ -45,13 +45,13 @@ set(CMAKE_CXX_FLAGS "-std=c++11")
 
 
 include_directories(SYSTEM ${EIGEN_INCLUDE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${OROCOS_KDL_INCLUDE_DIR} /usr/local/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include ${OROCOS_KDL_INCLUDE_DIR} /usr/local/include ${CMAKE_CURRENT_SOURCE_DIR}/ik-solvers/include/)
 
 message(STATUS ${OROCOS_KDL_INCLUDE_DIR})
 
 add_library(kuka-models)
-target_include_directories(kuka-models PUBLIC include)
-set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/KukaModel.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/models.cc)
+target_include_directories(kuka-models PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/plant-models/include)
+set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/plant-models/KukaModel.cpp ${CMAKE_CURRENT_SOURCE_DIR}/plant-models/models.ccp)
 target_sources(kuka-models PUBLIC ${SOURCES})
 
 add_library(ddp-solver)
@@ -78,14 +78,15 @@ install (TARGETS ModernRoboticsCpp
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin)
 
-add_library(ik-solvers STATIC ./src/ik_solver.cpp ./include/ik_solver.hpp ./include/ik_trajectory.hpp)
-target_include_directories(ik-solvers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobotics/include/)
+add_library(ik-solvers)
+target_include_directories(ik-solvers PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobotics/include/ ${CMAKE_CURRENT_SOURCE_DIR}/ik-solvers/include/)
+set(SOURCES_IK ${CMAKE_CURRENT_SOURCE_DIR}/ik-solvers/ik_solver.cpp)
 target_link_libraries(ik-solvers ModernRoboticsCpp)
+target_sources(ik-solvers PUBLIC ${SOURCES_IK})
+
 
 
 #######################################################################################
-
-
 
 
 add_executable(ddp-admm-contact src/admm_main.cpp)
@@ -102,7 +103,7 @@ add_executable(mpc-optim src/mpc_main.cpp)
 target_include_directories(mpc-optim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(mpc-optim orocos-kdl ddp-solver kuka-models)
 
-add_executable(ik-test src/ik_test.cpp)
+add_executable(ik-test ik-solvers/ik_test.cpp)
 target_include_directories(ik-test PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/ModernRobotics/include/ ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(ik-test ModernRoboticsCpp ik-solvers)
 
