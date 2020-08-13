@@ -10,16 +10,15 @@ using Eigen::VectorXd;
 
 namespace optimizer {
 
-ILQRSolverADMM::ILQRSolverADMM(KukaArm& iiwaDynamicModel, CostFunctionADMM& iiwaCostFunction, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox) : 
+ILQRSolverADMM::ILQRSolverADMM(KukaArm& DynamicModel, CostFunctionADMM& CostFunction, const OptSet& solverOptions, const int& time_steps, const double& dt_, bool fullDDP, bool QPBox) : 
         N(time_steps), dt(dt_), Op(solverOptions)
 {
     // TRACE("initialize dynamic model and cost function\n");
     // TODO : could be optimized here
 
-    dynamicModel  = &iiwaDynamicModel;
-    costFunction  = &iiwaCostFunction;
-    // stateNb       = iiwaDynamicModel.getStateNb();
-    // commandNb     = iiwaDynamicModel.getCommandNb();
+    dynamicModel  = &DynamicModel;
+    costFunction  = &CostFunction;
+
     enableQPBox   = QPBox;
     enableFullDDP = fullDDP;
 
@@ -89,11 +88,8 @@ ILQRSolverADMM::ILQRSolverADMM(KukaArm& iiwaDynamicModel, CostFunctionADMM& iiwa
 void ILQRSolverADMM::solve(const stateVec_t& x_0, const commandVecTab_t& u_0,
  const Eigen::MatrixXd& cList_bar, const stateVecTab_t& xList_bar, const commandVecTab_t& uList_bar, const Eigen::MatrixXd& thetaList_bar, const Eigen::VectorXd& rho)
 {
-    //==============
-    // Checked!!v
-    //==============
 
-    initializeTraj(x_0, u_0);
+    initializeTraj(x_0, u_0, cList_bar, xList_bar, uList_bar, thetaList_bar, rho);
 
     Op.lambda = Op.lambdaInit;
     Op.dlambda = Op.dlambdaInit;
@@ -127,6 +123,7 @@ void ILQRSolverADMM::solve(const stateVec_t& x_0, const commandVecTab_t& u_0,
             
             /* -------------- compute cx, cu, cxx, cuu ------------ */
             costFunction->computeDerivatives(xList, uListFull, cList_bar, xList_bar, uList_bar, thetaList_bar, rho);
+
             gettimeofday(&tend_time_deriv,NULL);
             Op.time_derivative(iter) = (static_cast<double>(1000*(tend_time_deriv.tv_sec-tbegin_time_deriv.tv_sec)+((tend_time_deriv.tv_usec-tbegin_time_deriv.tv_usec)/1000)))/1000.0;
 
@@ -280,7 +277,8 @@ void ILQRSolverADMM::solve(const stateVec_t& x_0, const commandVecTab_t& u_0,
     }
 }
 
-void ILQRSolverADMM::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0)
+void ILQRSolverADMM::initializeTraj(const stateVec_t& x_0, const commandVecTab_t& u_0, const Eigen::MatrixXd& cList_bar, const stateVecTab_t& xList_bar, 
+    const commandVecTab_t& uList_bar, const Eigen::MatrixXd& thetaList_bar, const Eigen::VectorXd& rho)
 {
     xList.col(0) = x_0;
     commandVec_t zeroCommand;
@@ -306,13 +304,15 @@ void ILQRSolverADMM::initializeTraj(const stateVec_t& x_0, const commandVecTab_t
     for (unsigned int i = 0; i < N; i++) 
     {
         updateduList.col(i)     = uList.col(i);
-
-        costList[i]             = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i));
+        // costList[i]             = costFunction->cost_func_expre(i, updatedxList.col(i), updateduList.col(i));
+        costList[i]             = costFunction->cost_func_expre_admm(i, updatedxList.col(i), updateduList.col(i), cList_bar.col(i), xList_bar.col(i), uList_bar.col(i), thetaList_bar.col(i), rho);
         updatedxList.col(i + 1) = forward_integration(updatedxList.col(i), updateduList.col(i));
     }
 
     // getting final cost, state, input = NaN
-    costList[N] = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc);
+    // costList[N] = costFunction->cost_func_expre(N, updatedxList.col(N), u_NAN_loc);
+    costList[N]  = costFunction->cost_func_expre_admm(N, updatedxList.col(N), u_NAN_loc, cList_bar.col(N), xList_bar.col(N), u_NAN_loc, thetaList_bar.col(N), rho);
+
 
     // simplistic divergence test, check for the last time step if it has diverged.
     int diverge_element_flag = 0;
@@ -445,7 +445,7 @@ void ILQRSolverADMM::doBackwardPass()
             Eigen::MatrixXd L = lltOfQuuF.matrixU(); 
             // assume QuuF is positive definite
             
-            // A temporary solution: check the non-PD case
+            // A temporary solution: check the non-PD case. TODO: double check here.
             if (lltOfQuuF.info() == Eigen::NumericalIssue)
             {
                 diverge = i;

@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
   int ADMMiterMax = 5;
   double dt = TimeStep;
 
-  ADMM::ADMMopt ADMMopts(dt, 1e-5, 1e-5, 15, ADMMiterMax);
+  ADMM::ADMMopt ADMMopts(dt, 1e-7, 1e-7, 15, ADMMiterMax);
 
   Eigen::MatrixXd joint_lims(2,7);
   double eomg = 0.00001;
@@ -77,10 +77,10 @@ int main(int argc, char *argv[])
   Eigen::VectorXd x_limits_upper(stateSize);
   Eigen::VectorXd u_limits_lower(commandSize);
   Eigen::VectorXd u_limits_upper(commandSize);
-  x_limits_lower << -M_PI, -M_PI, -M_PI, -M_PI, -M_PI, -M_PI, -M_PI, -0.2, -0.2, -0.2, -0.2, -0.2, -0.2, -0.2, -10, -10, -10;    
-  x_limits_upper << M_PI, M_PI, M_PI, M_PI, M_PI, M_PI, M_PI, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 10, 10, 10;      
-  u_limits_lower << -10, -10, -10, -10, -10, -10, -10;
-  u_limits_upper << 10, 10, 10, 10, 10, 10, 10;
+  x_limits_lower << -M_PI, -M_PI, -M_PI, -M_PI, -M_PI, -M_PI, -M_PI, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -10, -10, -10;    
+  x_limits_upper << M_PI, M_PI, M_PI, M_PI, M_PI, M_PI, M_PI, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 10, 10, 10;      
+  u_limits_lower << -20, -20, -20, -20, -20, -20, -20;
+  u_limits_upper << 20, 20, 20, 20, 20, 20, 20;
 
   LIMITS.stateLimits.row(0) = x_limits_lower;
   LIMITS.stateLimits.row(1) = x_limits_upper;
@@ -91,6 +91,7 @@ int main(int argc, char *argv[])
 
   /* State Tracking. Force tracking */
   Eigen::MatrixXd F(3, N);
+  F.setZero();
   // F.row
   xtrack.block(14, 0, 3, xtrack.cols()) = F;
  
@@ -130,8 +131,9 @@ int main(int argc, char *argv[])
   xinit.head(7) = thetalist_ret;
 
   Eigen::VectorXd rho(5);
-  rho << 1, 0.01, 0, 0, 1;
+  rho << 20, 0.01, 0, 0, 1;
   
+  // std::cout << xinit << std::endl;
   optimizerADMM.run(kukaRobot, KukaArmModel, xinit, xtrack, cartesianPoses, rho, LIMITS);
 
   // TODO : saving data file
