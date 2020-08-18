@@ -28,7 +28,7 @@ find_package(OROCOS_KDL)
 if (OROCOS_KDL)
 endif()
 
-
+find_package(ZLIB REQUIRED)
 
 
 # set(OROCOS_KDL_INCLUDE_DIR ${OROCOS_KDL_INCLUDE_DIR})
@@ -55,9 +55,9 @@ set(SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/plant-models/KukaModel.cpp ${CMAKE_CURRE
 target_sources(kuka-models PUBLIC ${SOURCES})
 
 add_library(ddp-solver)
-target_include_directories(ddp-solver PUBLIC include)
-set(SOURCES_DDP ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/kuka_arm.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/ddp.cpp)
-target_link_libraries(ddp-solver PUBLIC kuka-models)
+target_include_directories(ddp-solver PUBLIC include ${CMAKE_CURRENT_SOURCE_DIR}/cnpy)
+set(SOURCES_DDP ${CMAKE_CURRENT_SOURCE_DIR}/src/ilqrsolver.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/kuka_arm.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/ddp.cpp )
+target_link_libraries(ddp-solver PUBLIC kuka-models cnpy)
 target_sources(ddp-solver PUBLIC ${SOURCES_DDP})
 
 add_library(ddp-admm-solver)
@@ -84,7 +84,9 @@ set(SOURCES_IK ${CMAKE_CURRENT_SOURCE_DIR}/ik-solvers/ik_solver.cpp)
 target_link_libraries(ik-solvers ModernRoboticsCpp)
 target_sources(ik-solvers PUBLIC ${SOURCES_IK})
 
-
+add_library(cnpy STATIC ${CMAKE_CURRENT_SOURCE_DIR}/cnpy/cnpy.cpp)
+target_include_directories(cnpy PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cnpy)
+target_link_libraries(cnpy ${ZLIB_LIBRARIES})
 
 #######################################################################################
 
@@ -96,7 +98,7 @@ target_link_libraries(ddp-admm-contact orocos-kdl ddp-admm-solver kuka-models Mo
 
 add_executable(ddp-optim src/ddp_main.cpp)
 target_include_directories(ddp-optim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(ddp-optim orocos-kdl ddp-solver kuka-models)
+target_link_libraries(ddp-optim orocos-kdl ddp-solver kuka-models cnpy)
 
 
 add_executable(mpc-optim src/mpc_main.cpp)
@@ -112,6 +114,11 @@ target_link_libraries(ik-test ModernRoboticsCpp ik-solvers)
 add_executable(test_cases src/test.cpp)
 target_include_directories(test_cases PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(test_cases ModernRoboticsCpp ik-solvers orocos-kdl kuka-models ddp-solver)
+
+
+add_executable(test_hdf5 src/testhdf5.cpp)
+target_include_directories(test_hdf5 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/cnpy)
+target_link_libraries(test_hdf5 cnpy)
 
 
 #add_executable(l ${LIB_TEST_SOURCES})
