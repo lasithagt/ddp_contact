@@ -17,6 +17,8 @@
 /* DDP trajectory generation */
 
 #include "ddp.h"
+#include "cnpy.h"
+
 
 using namespace std;
 using namespace Eigen;
@@ -190,6 +192,13 @@ void DDP::run(stateVec_t xinit, stateVec_t xgoal, stateVecTab_t xtrack)
     {
       joint_state_traj.col(i) = lastTraj.xList.col(i);
     }
+
+    // save data
+    const int Ny = joint_state_traj.rows();
+    const int Nx = joint_state_traj.cols();
+
+    cnpy::npy_save("../data/state_trajectory_ddp.npy", joint_state_traj.data(),{1, static_cast<unsigned long>(Nx), static_cast<unsigned long>(Ny)}, "w");
+
 
     torque_traj = lastTraj.uList;
 

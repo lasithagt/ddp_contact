@@ -72,7 +72,7 @@ public:
         std::shared_ptr<KUKAModelKDL> kukaRobot = std::shared_ptr<KUKAModelKDL>(new KUKAModelKDL(robot, robotParams));
 
         //======================================
-
+        // contact model dynamics
         #if WHOLE_BODY
             ContactModel::ContactParams cp_;
             cp_.E = 1000;
