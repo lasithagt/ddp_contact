@@ -96,7 +96,6 @@ int main(int argc, char *argv[])
   xtrack.block(14, 0, 3, xtrack.cols()) = F;
  
 
-
   // parameters for ADMM, penelty terms. initial
   Eigen::VectorXd rho_init(5);
   rho_init << 0, 0, 0, 0, 0;
@@ -133,7 +132,6 @@ int main(int argc, char *argv[])
   Eigen::VectorXd rho(5);
   rho << 20, 0.01, 0, 0, 1;
   
-  // std::cout << xinit << std::endl;
   optimizerADMM.run(kukaRobot, KukaArmModel, xinit, xtrack, cartesianPoses, rho, LIMITS);
 
   // TODO : saving data file

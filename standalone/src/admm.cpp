@@ -100,7 +100,7 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
 
     /* -------------------- orocos kdl robot initialization-------------------------*/
     KUKAModelKDLInternalData robotParams;
-    robotParams.numJoints = 7;
+    robotParams.numJoints = NDOF;
     robotParams.Kv = Eigen::MatrixXd(7,7);
     robotParams.Kp = Eigen::MatrixXd(7,7);
 
@@ -108,7 +108,7 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
     /*------------------initialize control input-----------------------*/
 
     // cost function. TODO: make this updatable
-    CostFunctionADMM costFunction_admm(xtrack.col(N), xtrack);
+    CostFunctionADMM costFunction_admm(N);
 
     /* -------------------- Optimizer Params ------------------------ */
     optimizer::ILQRSolverADMM::OptSet solverOptions;
@@ -123,7 +123,7 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
     /* ---------------------------------------- Initial Trajectory ---------------------------------------- */
     // Initialize Trajectory to get xnew with u_0 
     optimizer::ILQRSolverADMM::traj lastTraj;
-    solverDDP.initializeTraj(xinit, u_0, cbar, xbar, ubar, qbar, rho);
+    solverDDP.initializeTraj(xinit, u_0, xtrack, cbar, xbar, ubar, qbar, rho);
 
     lastTraj = solverDDP.getLastSolvedTrajectory();
     xnew = lastTraj.xList;
@@ -143,7 +143,7 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
     double error_fk = 0.0;
 
     /* ----------------------------------------------- TESTING ----------------------------------------------- */
-    for (int i = 0;i < cartesianTrack.size()-1;i++) {
+    for (int i = 0;i < cartesianTrack.size() - 1; i++) {
         temp_fk  = mr::FKinSpace(IK_OPT.M, IK_OPT.Slist, joint_positions_IK.col(i));
         error_fk = error_fk + (cartesianTrack.at(i) - mr::FKinSpace(IK_OPT.M, IK_OPT.Slist, joint_positions_IK.col(i))).norm();
 
@@ -192,16 +192,17 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
 
 
     for (unsigned int i = 0; i < ADMM_OPTS.ADMMiterMax; i++) {
+
         // TODO: Stopping criterion is needed
         std::cout << "\n ================================= ADMM iteration " << i + 1 << " ================================= \n";
 
        /* ---------------------------------------- iLQRADMM solver block ----------------------------------------   */
-        solverDDP.solve(xinit, unew, cbar - c_lambda, xbar - x_lambda, ubar - u_lambda, qbar - q_lambda, rho_ddp);
+        solverDDP.solve(xinit, unew, xtrack, cbar - c_lambda, xbar - x_lambda, ubar - u_lambda, qbar - q_lambda, rho_ddp);
 
         lastTraj = solverDDP.getLastSolvedTrajectory();
-        xnew = lastTraj.xList;
-        unew = lastTraj.uList;
-        qnew = xnew.block(0, 0, 7, N + 1);
+        xnew     = lastTraj.xList;
+        unew     = lastTraj.uList;
+        qnew     = xnew.block(0, 0, 7, N + 1);
 
         /* ----------------------------------------------- TESTING ----------------------------------------------- */
         temp.setZero();
@@ -264,7 +265,6 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
         c_temp = cnew + c_lambda;
         u_temp = unew + u_lambda;
 
-
         xubar = projection(x_temp, c_temp, u_temp, L);
 
         /* Dual variables update */
@@ -300,16 +300,19 @@ void ADMM::run(std::shared_ptr<KUKAModelKDL>& kukaRobot, KukaArm& KukaArmModel, 
 
         /* ------------------------------- get the cost without augmented Lagrangian terms ------------------------------- */
         cost = 0;
+
         for (int i = 0;i < N;i++) {
-            cost = cost + costFunction_admm.cost_func_expre(i, xnew.col(i), unew.col(i));
+            cost = cost + costFunction_admm.cost_func_expre(i, xnew.col(i), unew.col(i), xtrack.col(i));
         }
+
+
 
         final_cost[i + 1] = cost;
     }
 
     gettimeofday(&tend,NULL);    
 
-    solverDDP.initializeTraj(xinit, unew, cbar, xbar, ubar, qbar, rho);
+    solverDDP.initializeTraj(xinit, unew, xtrack, cbar, xbar, ubar, qbar, rho);
 
     lastTraj = solverDDP.getLastSolvedTrajectory();
     xnew = lastTraj.xList;
