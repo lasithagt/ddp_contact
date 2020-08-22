@@ -65,6 +65,7 @@ public:
     Logger* logger_;
     ControlTrajectory control_trajectory;
     StateTrajectory x_track_;
+    std::vector<Eigen::MatrixXd> cartesianTrack_;
     int HMPC_;
 
 public:
@@ -81,8 +82,9 @@ public:
     		 Dynamics                       &dynamics,
 	         CostFunction                   &cost_function,
 	         Optimizer 						&opt,
-	         const StateTrajectory  		&x_track)
-    : dt_(dt), H_(time_steps), HMPC_(HMPC), verbose_(verbose), dynamics_(dynamics), cost_function_(cost_function), opt_(opt), x_track_(x_track)  
+	         const StateTrajectory  		&x_track, 
+	         const std::vector<Eigen::MatrixXd> &cartesianTrack)
+    : dt_(dt), H_(time_steps), HMPC_(HMPC), verbose_(verbose), dynamics_(dynamics), cost_function_(cost_function), opt_(opt), x_track_(x_track), cartesianTrack_(cartesianTrack)
     {
     	logger_ = logger;
     	control_trajectory.resize(commandSize, H_);
@@ -103,8 +105,11 @@ public:
 	void run(const Eigen::Ref<const State>  &initial_state,
 	         ControlTrajectory              initial_control_trajectory,
 	         Plant                          &plant_,
-	         Eigen::MatrixXd	            &joint_state_traj,
-	         TerminationCondition           &terminate)
+	         Eigen::MatrixXd	            &joint_state_traj, // save data
+
+	         TerminationCondition           &terminate,
+	         const Eigen::VectorXd 			&rho,
+	         const ADMM::Saturation			&L)
 	         // TerminalCostFunction           &terminal_cost_function)
 	{
 
@@ -119,8 +124,16 @@ public:
 	    // Scalar true_cost = cost_function.c(xold, initial_control_trajectory[0]);
 
 	    Eigen::MatrixXd x_track_mpc;
+	    std::vector<Eigen::MatrixXd> cartesianTrack_mpc;
+	    cartesianTrack_mpc.resize(H_ + 1);
+
+	    for (int k = 0;k < H_ + 1;k++) {
+	    	cartesianTrack_mpc[k] = cartesianTrack_[k];
+	    }
+
 	    x_track_mpc.resize(stateSize, H_ + 1);
 	    x_track_mpc = x_track_.block(0, 0, stateSize, H_ + 1);
+
 
 	    scalar_t true_cost = cost_function_.cost_func_expre(0, xold, initial_control_trajectory.col(0), x_track_.col(0));
 	    
@@ -148,10 +161,11 @@ public:
 
 	        // Run the optimizer to obtain the next control
 
-	        opt_.solve(xold, control_trajectory, x_track_mpc);
-	        result = opt_.getLastSolvedTrajectory();
+	        opt_.solve(xold, control_trajectory, x_track_mpc, cartesianTrack_mpc, rho, L);
 
+	        result = opt_.getLastSolvedTrajectory();
 	        u = result.uList.col(0);
+
 	        if(verbose_)
 	        {
 	            logger_->info("Obtained control from optimizer: ");
@@ -196,6 +210,10 @@ public:
 	        xold = x;
 
 	        x_track_mpc = x_track_.block(0, i, stateSize, H_ + 1);
+
+	        for (int k = 0;k < H_ + 1;k++) {
+	    		cartesianTrack_mpc[k] = cartesianTrack_[i + k];
+	    	}
 
 	        if(verbose_) logger_->info("Slide down the desired trajectory\n");
 

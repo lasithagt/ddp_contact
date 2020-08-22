@@ -20,7 +20,7 @@
 #define CARTESIAN_FRAME 10
 
 #define SOFT_CONTACT 1
-#define CONTACT_EN 1
+#define CONTACT_EN 0
 #define DEBUG 1
 #define TRACK 1
 

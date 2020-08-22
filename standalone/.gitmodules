@@ -1,0 +1,3 @@
+[submodule "ModernRobotics"]
+	path = ModernRobotics
+	url = https://github.com/Le0nX/ModernRoboticsCpp.git
