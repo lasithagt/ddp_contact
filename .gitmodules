@@ -1,0 +1,3 @@
+[submodule "standalone"]
+	path = standalone
+	url = https://github.com/lasithagt/admm.git
