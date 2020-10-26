@@ -1,5 +1,5 @@
-[submodule "Matlab/ADMM/ADMM_3BLKS/IK_solvers/ModernRoboticsCPP"]
-	path = Matlab/ADMM/ADMM_3BLKS/IK_solvers/ModernRoboticsCPP
+[submodule "Matlab/ADMM/ADMM_3BLKS/IK_solvers/ModernRobotics"]
+	path = Matlab/ADMM/ADMM_3BLKS/IK_solvers/ModernRobotics
 	url = https://github.com/lasithagt/ModernRobotics.git
 [submodule "Matlab/ADMM/ModernRobotics"]
 	path = Matlab/ADMM/ModernRobotics
