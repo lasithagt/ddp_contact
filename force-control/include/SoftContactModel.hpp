@@ -27,9 +27,6 @@ public:
 SoftContactModel(ContactParams cp) : cp_(cp)
 {
 
-   // cp_ = cp;
-   // cp_.K = K;
-
 }
    
 ~SoftContactModel()

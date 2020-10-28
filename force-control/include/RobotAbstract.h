@@ -20,7 +20,7 @@ public:
 
 	virtual int initRobot() = 0;
 
-	virtual void getForwardKinematics(double* q, double* qd, double *qdd, Eigen::Matrix<double,3,3>& poseM, Eigen::Vector3d& poseP, Eigen::Vector3d& vel, Eigen::Vector3d& accel, bool computeOther) = 0;
+	virtual void getForwardKinematics(double* q, double* qd, double* qdd, Eigen::Vector4d& poseM, Eigen::Vector3d& poseP, Eigen::Vector3d& vel, Eigen::Vector3d& accel, bool computeOther) = 0;
 
 	/* given q, qdot, qddot, outputs torque output*/
 	virtual void getInverseDynamics(double* q, double* qd, double* qdd, Eigen::VectorXd& torque) = 0;
@@ -31,7 +31,7 @@ public:
 
 	virtual void getMassMatrix(double* jointPositions, Eigen::MatrixXd& massMatrix) = 0;
 
-	virtual void getCoriolisMatrix(double* q, double* qd, Eigen::VectorXd& coriolis) = 0;
+	virtual void getCoriolisMatrix(double* q, double* qd, Eigen::VectorXd& coriolis) {}
 
 	virtual void getGravityVector(double* q, Eigen::VectorXd& gravityTorque) = 0;
 
