@@ -58,24 +58,24 @@ int main(int argc, char* argv[])
 	double* q = new double[7];
 	double* qd = new double[7];
 	double* qdd_ = new double[7];
-	for (int i = 0; i < 7; i++) {q[i] = 0.5; qd[i] = 0.1;};
+	for (int i = 0; i < 7; i++) {q[i] = 0.0; qd[i] = 0.1;};
 
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 
-	kukaRobot->getGravityVector(q, gravityTorque);
-	kukaRobot->getMassMatrix(q, massMatrix);
+	// kukaRobot.getGravityVector(q, gravityTorque);
+	// kukaRobot.getMassMatrix(q, massMatrix);
 	// kukaRobot.getCoriolisMatrix(q, qd, coriolis);
-	kukaRobot->getForwardDynamics(q, qd, force_ext, qdd);
-	kukaRobot->getSpatialJacobian(q, jacobian);
+	// kukaRobot->getForwardDynamics(q, qd, force_ext, qdd);
+	// kukaRobot->getSpatialJacobian(q, jacobian);
 	// kukaRobot->getSpatialJacobianDot(q, qd, jacobian);
-	// kukaRobot->getForwardKinematics(q, qd, qdd_, poseM, poseP, vel, accel, false);
+	kukaRobot->getForwardKinematics(q, qd, qdd_, poseM, poseP, vel, accel, false);
 	// kukaAnalytical->getForwardKinematics(q, qd, qdd_, poseM, poseP, vel, accel, false);
 	// kukaAnalytical->getSpatialJacobian(q, jacobian);
 
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	// milliseconds time_span = duration_cast<milliseconds>(t2 - t1);
 	duration<double, std::micro> time_span = t2 - t1;
-	std::cout << "It took me " << time_span.count() << " micros\n";
+	std::cout << "It took me " << time_span.count() << " micros";
 
 
 
@@ -84,15 +84,15 @@ int main(int argc, char* argv[])
 	/* ------------------------------------------------------- */
 
 	/* Test inverse dynamics */
-	std::cout << gravityTorque.format(CleanFmt) << std::endl;
-	std::cout << massMatrix.format(CleanFmt) << std::endl;
+	// std::cout << gravityTorque.format(CleanFmt) << std::endl;
+	// std::cout << massMatrix.format(CleanFmt) << std::endl;
 	// std::cout << coriolis.format(CleanFmt) << std::endl;
-	std::cout << qdd.format(CleanFmt) << std::endl;
-	std::cout << jacobian.format(CleanFmt) << std::endl;
+	// std::cout << qdd.format(CleanFmt) << std::endl;
+	// std::cout << jacobian.format(CleanFmt) << std::endl;
 	std::cout << poseM.format(CleanFmt) << std::endl;
 	std::cout << poseP.format(CleanFmt) << std::endl;
-	// std::cout << vel.format(CleanFmt) << std::endl;
-	// std::cout << accel.format(CleanFmt) << std::endl;
+	std::cout << vel.format(CleanFmt) << std::endl;
+	std::cout << accel.format(CleanFmt) << std::endl;
 
 
 	// Test Admittace Force Controller
