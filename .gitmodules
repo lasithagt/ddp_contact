@@ -1,10 +1,9 @@
-[submodule "Matlab/ADMM/ADMM_3BLKS/IK_solvers/ModernRobotics"]
-	path = Matlab/ADMM/ADMM_3BLKS/IK_solvers/ModernRobotics
-	url = https://github.com/lasithagt/ModernRobotics.git
-	ignore = dirty
 [submodule "standalone"]
 	path = standalone
 	url = https://github.com/lasithagt/admm.git
 [submodule "Matlab/ADMM/ModerRobotics"]
 	path = Matlab/ADMM/ModerRobotics
+	url = https://github.com/lasithagt/ModernRobotics.git
+[submodule "Matlab/ADMM/ADMM_3BLKS/IK_solvers/ModernRobotics"]
+	path = Matlab/ADMM/ADMM_3BLKS/IK_solvers/ModernRobotics
 	url = https://github.com/lasithagt/ModernRobotics.git
