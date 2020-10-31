@@ -1,0 +1,87 @@
+[
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/test_hdf5.dir/src/testhdf5.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/testhdf5.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/testhdf5.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/ddp-admm-solver.dir/src/ilqrsolver_admm.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/ilqrsolver_admm.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/ilqrsolver_admm.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/ddp-admm-solver.dir/src/kuka_arm.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/kuka_arm.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/kuka_arm.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/ddp-admm-solver.dir/src/admm.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/admm.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/admm.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/ddp-admm-solver.dir/src/admm_main.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/admm_main.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/admm_main.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ik-solvers/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/admm-contact.dir/src/OPT_solvers.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/OPT_solvers.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/OPT_solvers.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ik-solvers/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/admm-mpc.dir/src/admm_mpc_main.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/admm_mpc_main.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/admm_mpc_main.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ddp/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ik-solvers/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/mpc-optim.dir/src/mpc_main.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/mpc_main.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/mpc_main.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ik-solvers/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ddp/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/test_cases.dir/src/test.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/test.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/test.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ddp/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ik-solvers/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/ddp-optim.dir/src/ddp_main.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/ddp_main.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/src/ddp_main.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ik-solvers/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/ik-test.dir/ik-solvers/ik_test.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ik-solvers/ik_test.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ik-solvers/ik_test.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy/plant-models",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/kuka-models.dir/KukaModel.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/KukaModel.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/KukaModel.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy/plant-models",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/kuka-models.dir/models.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/models.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/models.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy/ik-solvers",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ik-solvers/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/ik-solvers.dir/ik_solver.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ik-solvers/ik_solver.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ik-solvers/ik_solver.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy/ddp",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ddp/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/ddp-solver.dir/ilqrsolver.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ddp/ilqrsolver.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ddp/ilqrsolver.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy/ddp",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ddp/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/ddp-solver.dir/kuka_arm.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ddp/kuka_arm.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ddp/kuka_arm.cpp"
+},
+{
+  "directory": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/cnpy/ddp",
+  "command": "/usr/bin/g++  -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ddp/include -I/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/plant-models/include -isystem /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/eigen -std=c++11 -O3 -o CMakeFiles/ddp-solver.dir/ddp.cpp.o -c /home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ddp/ddp.cpp",
+  "file": "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/standalone/ddp/ddp.cpp"
+}
+]
