@@ -78,3 +78,61 @@ target_link_libraries(KukaRobot orocos-kdl force-control kuka-models)
 
 
 
+
+###########################################INSTALL AND EXPORT##############################################
+include(CMakePackageConfigHelpers)
+install (TARGETS ddp-admm-solver kuka-models ik-solvers
+        EXPORT ADMMTargets
+        ARCHIVE DESTINATION lib/static
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin
+        INCLUDES DESTINATION include)
+# add include directories
+target_include_directories(ddp-admm-solver
+                           PUBLIC
+                           "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
+                           $<INSTALL_INTERFACE:include>
+)
+
+# install header file
+install(FILES include/config.h include/kuka_arm.h DESTINATION include)
+
+# # set version
+set(version 3.4.1)
+
+set_property(TARGET ddp-admm-solver kuka-models PROPERTY VERSION ${version})
+set_property(TARGET ddp-admm-solver kuka-models PROPERTY SOVERSION 3)
+set_property(TARGET ddp-admm-solver kuka-models PROPERTY
+  INTERFACE_admm_MAJOR_VERSION 3)
+set_property(TARGET ddp-admm-solver kuka-models APPEND PROPERTY
+  COMPATIBLE_INTERFACE_STRING admm_MAJOR_VERSION
+)
+
+# generate the export targets for the build tree
+export(EXPORT ADMMTargets
+       FILE "${CMAKE_CURRENT_BINARY_DIR}/cmake/ADMMTargets.cmake"
+)
+
+# generate the version file for the config file
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/ADMMConfigVersion.cmake"
+  VERSION "${version}"
+  COMPATIBILITY AnyNewerVersion
+)
+
+# create config file
+configure_package_config_file(${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/ADMMConfig.cmake"
+  INSTALL_DESTINATION cmake
+  NO_CHECK_REQUIRED_COMPONENTS_MACRO
+
+)
+
+# install config files
+install(FILES
+          "${CMAKE_CURRENT_BINARY_DIR}/ADMMConfig.cmake"
+          "${CMAKE_CURRENT_BINARY_DIR}/ADMMConfigVersion.cmake"
+        DESTINATION cmake
+)
+
+
