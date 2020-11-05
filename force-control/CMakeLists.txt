@@ -85,7 +85,7 @@ target_include_directories(force-control
 )
 
 # install header file
-install(FILES include/AdmittanceForceController.h include/SoftContactModel.h include/RobotAbstract.h DESTINATION include)
+install(FILES include/AdmittanceForceController.h include/SoftContactModel.h  DESTINATION include)
 
 # # set version
 set(version 3.4.1)
