@@ -2,7 +2,7 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
     
     % dynamics for a point mass
     global inertial_params 
-    ret     = zeros(10, size(x,2));
+    ret     = zeros(11, size(x,2));
 %     tic
     for i = 1:size(x,2)
         
@@ -80,14 +80,16 @@ function ret = fdyn_dynamics_admm_3blk(x, u, RC, K_D)
         F_normal_dot = 2 * m * x_dot(1:3) .* xdd_e(1:3); % / RC(i);
 
         
-        F_dot        = 0*F_f_dot - k  * x_dot(3) * [0;0;1] - 2*xdd_e(3) * [0;0;1] + 0*F_normal_dot .* K_DIR;
+        F_dot        = 0 * F_f_dot - k  * x_dot(3) * [0;0;1] - 2*xdd_e(3) * [0;0;1] + 0*F_normal_dot .* K_DIR;
+        F_dot        = F_f_dot - 800 * x_dot(3) * [0;0;1] - 100.0 * xdd_e(3) * [0;0;1];
         
-        F_dot        = F_f_dot - k * x_dot(3) * [0;0;1] - 10.0 * xdd_e(3) * [0;0;1];
-        
-        ret(:,i)     = [qdd; F_dot];
-        %         ret(:,i) = [qdd; zeros(3,1)];
+        % dynamic time
+        dt_f         = -0.1*x(end,i) + u(8,i);
+        ret(:,i)     = [qdd; F_dot; dt_f];
+%         ret(:,i) = [qdd; zeros(3,1)];
         
     end
+%     toc
     
     % compute J dot
     function J_d = J_dot(x)
