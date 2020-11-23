@@ -1,5 +1,7 @@
 #!/bin/bash
 
+git checkout bullet-dev 
+
 echo "Initialize Submodules"
 git submodule init
 git submodule update
