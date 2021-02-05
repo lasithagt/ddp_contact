@@ -2,6 +2,7 @@
 
 git checkout bullet-dev 
 
+# test
 echo "Initialize Submodules"
 git submodule init
 git submodule update

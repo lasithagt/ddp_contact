@@ -42,7 +42,7 @@ unset(_expectedTargets)
 
 
 # The installation prefix configured by this project.
-set(_IMPORT_PREFIX "/home/lasitha/Documents/bullet-2.89/examples/KUKAEnv/ddp_contact/third-party/cnpy")
+set(_IMPORT_PREFIX "/home/lasitha/Documents/Github/bullet/examples/KUKAEnv/ddp_contact/third-party/cnpy")
 
 # Create imported target cnpy
 add_library(cnpy SHARED IMPORTED)
