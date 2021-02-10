@@ -53,7 +53,7 @@ function [thetalist, thetalistd, fk_current] = kuka_second_order_IK(x_des, q0, q
             % thetalist                 = mod(thetalist, 2 * pi);
 
             thetalist0                = thetalist(:,i);
-            thetalistd0               = thetalistd(:,i);
+            thetalistd0                = thetalistd(:,i);
             
             fk_                       = FKinSpace(g_st, S, thetalist(:,i));
             fk_current(1:3, i)        = fk_(1:3, 4);
@@ -64,12 +64,11 @@ function [thetalist, thetalistd, fk_current] = kuka_second_order_IK(x_des, q0, q
         j = j + 1;
         c = cost_trajectory(fk_desired, fk_current);
         if (is_plot)
-            grid on
             figure(1)
             plot3(fk_current(1,:), fk_current(2,:), fk_current(3,:)); 
             axis([-0.15 0.15 -0.15 0.15 0.7 0.95])
         end
-        
+        grid on
         
         
     end

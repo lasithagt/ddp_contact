@@ -1,6 +1,6 @@
 function [x, u, cost] = ADMM_DDP_3BLKS(DYNCST, x0, u0, Op)
 %---------------------- user-adjustable parameters ------------------------
-global RC x_des 
+global RC x_des inertial_params
 % --- initial sizes and controls
 n   = size(x0,1);          % dimension of state vector
 m   = size(u0, 1);          % dimension of control vector
@@ -13,7 +13,7 @@ u   = u0;                   % initial control sequence
 %         'dcost',nan);
 % trace = repmat(trace,[min(Op.maxIter,1e6) 1]);
 % trace(1).iter = 1;
-iter = 5;
+iter = 10;
 
         
 % --- initial trajectory
@@ -50,13 +50,13 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-% rhao   = [2, 1e-3, 1e-5, 0, 2];
-rhao   = Op.rhao;
+rhao   = [1, 1e-2, 1e-2, 0, 1];
 
-% alpha  = 1.5;
-% alphak = 1;
-% yita   = 0.999;
-admmMaxIter  = Op.admmMaxIter;
+
+alpha  = 1.5;
+alphak = 1;
+yita   = 0.999;
+admmMaxIter  = 5;
 
 %%%%%%% Primal variables
 % ddp primal
@@ -67,7 +67,7 @@ cnew = [c;x(end,:)]; % include both centrifugal and normal forces
 
 % ik primal
 % warm start by ik
-[x_ik_ws, xd_ik_ws, fk]  = kuka_second_order_IK(x_des(1:6,:), x0(1:7), x0(8:14), [0;0], zeros(7, size(x_des,2)), zeros(7, size(x_des,2)), 1);
+[x_ik_ws, xd_ik_ws, fk]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], zeros(7, size(x_des,2)), zeros(7, size(x_des,2)), 1);
 thetalist = x_ik_ws; 
 thetalistd = 0*xd_ik_ws;
 x0(8:14) = thetalistd(:,1);
@@ -146,7 +146,7 @@ for i = 1:admmMaxIter
         thetalist_old = thetalist;
         thetalistd_old = thetalistd;
         
-        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des(1:6,:), x0(1:7), x0(8:14), rhao(4:5), x_bar(1:7,:)-q_lambda, qdnew+qd_lambda, 1);
+        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), rhao(4:5), x_bar(1:7,:)-q_lambda, qdnew+qd_lambda, 1);
         
         % ====== project operator to satisfy the constraint ======= %
         x_bar_old = x_bar;
@@ -154,9 +154,9 @@ for i = 1:admmMaxIter
         u_bar_old = u_bar;
         
         q_avg = (qnew + thetalist)/2;
-        %         x_avg = [q_avg; xnew(8:17,:)];
+%         x_avg = [q_avg; xnew(8:17,:)];
         x_lambda_avg = (x_lambda(1:7,:) + q_lambda)/2;
-        %         x_lambda_avg = [(x_lambda(1:7,:) + q_lambda)/2;x_lambda(8:17,:)];
+%         x_lambda_avg = [(x_lambda(1:7,:) + q_lambda)/2;x_lambda(8:17,:)];
         [x_bar, c_bar, u_bar] = proj(q_avg+x_lambda_avg, cnew+c_lambda, unew+u_lambda, Op.lims);
 
         %====== dual variables update
@@ -166,9 +166,140 @@ for i = 1:admmMaxIter
         q_lambda = q_lambda + thetalist - x_bar;
         qd_lambda = qd_lambda + qdnew - thetalistd;
         
+    %% Original simple ADMM 
+%         % ====== iLQR block incorporating the soft contact model
+%         % robot manipulator
+%         % consensus: 
+%         fprintf('\n=========== begin iLQR %d ===========\n',i);
+%         [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, rhao, x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
+%         qnew            = xnew(1:7,:);
+%         qdnew           = xnew(8:14,:);
+%         cnew            = 0.3 * sum(xnew(15:17,:).^2,1) ./ RC';
+%         
+%         % ====== ik block ====== %
+%         fprintf('\n=========== begin IK %d ===========\n',i);
+%         thetalist_old = thetalist;
+%         thetalistd_old = thetalistd;
+%         
+%         [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), 0*x0(8:14), rhao(4:5), qnew+q_lambda, qdnew+qd_lambda, 1);
+%         
+%         % ====== project operator to satisfy the constraint ======= %
+%         x_bar_old = x_bar;
+%         c_bar_old = c_bar;
+%         u_bar_old = u_bar;
+%         
+%         [x_bar, c_bar, u_bar] = proj(xnew+x_lambda, cnew+c_lambda, unew+u_lambda, Op.lims);
+% 
+%         %====== dual variables update
+%         x_lambda = x_lambda + xnew - x_bar;
+%         c_lambda = c_lambda + cnew - c_bar;
+%         u_lambda = u_lambda + unew - u_bar;
+%         q_lambda = q_lambda + qnew - thetalist;
+%         qd_lambda = qd_lambda + qdnew - thetalistd;
+    
+    %% ADMM with relaxtion 
+%         %====== proximal operator to minimize to cost
+%         % robot manipulator
+% 
+%         [xnew, unew, ~] = iLQG_ADMM_BLKS(DYNCST, DYNCST_primal, x0, unew, rhao, x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, Op);
+%         
+%         % prototype for the IK block
+%         % [thetalist, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), rho, q_bar, qd_bar, plot_IK);
+%         
+%         cnew            = 0.3 * sum(xnew(21:23,:).^2,1) ./ RC';
+%         
+%         % Relaxtion
+%         xnew2 = alpha * xnew + (1-alpha) * x_bar;
+%         cnew2 = alpha * cnew + (1-alpha) * c_bar;
+%         unew2 = alpha * unew + (1-alpha) * u_bar;
+% 
+%         %====== project operator to satisfy the constraint
+%         x_bar_old = x_bar;
+%         c_bar_old = c_bar;
+%         u_bar_old = u_bar;
+%         [x_bar, c_bar, u_bar] = proj(xnew2+x_lambda, cnew2+c_lambda, unew2+u_lambda, Op.lims);
+% 
+%         %====== dual variables update
+%         x_lambda = x_lambda + xnew2 - x_bar;
+%         c_lambda = c_lambda + cnew2 - c_bar;
+%         u_lambda = u_lambda + unew2 - u_bar;
+        
 
+%%==================================================
     else    
+     %% Accelerated ADMM(strongly convex)
+%         if i == 100
+%             x_bar2 = x_bar;
+%             u_bar2 = u_bar;
+%             x_lambda2 = x_lambda;
+%             u_lambda2 = u_lambda;
+%         end
+%        
+%         %====== proximal operator to minimize to cost
+%         [xnew, unew, ~] = iLQG2(DYNCST, DYNCST2, x0, unew, roll, x_bar2-x_lambda2,u_bar2-u_lambda2, Op);
+% 
+%         %====== project operator to satisfy the constraint
+%         x_bar_old = x_bar;
+%         u_bar_old = u_bar;
+%         [x_bar, u_bar] = proj(xnew+x_lambda2, unew+u_lambda2, Op.lims);
+% 
+%         %====== dual variables update
+%         x_lambda_old = x_lambda;
+%         u_lambda_old = u_lambda;
+%         x_lambda = x_lambda2 + xnew - x_bar;
+%         u_lambda = u_lambda2 + unew - u_bar;
+% 
+%         %====== Strong convex
+%         alphak_v(:,i+1) = (1+sqrt(1+4*alphak_v(:,i)^2))/2;
+%         x_bar2 = x_bar + 0.375*((alphak_v(:,i)-1)/alphak_v(:,i+1))*(x_bar-x_bar_old);
+%         u_bar2 = u_bar + 0.375*((alphak_v(:,i)-1)/alphak_v(:,i+1))*(u_bar-u_bar_old);
+%         x_lambda2 = x_lambda + 0.375*((alphak_v(:,i)-1)/alphak_v(:,i+1))*(x_lambda-x_lambda_old);
+%         u_lambda2 = u_lambda + 0.375*((alphak_v(:,i)-1)/alphak_v(:,i+1))*(u_lambda-u_lambda_old);
 
+    %% Accelerated ADMM(weakly convex)
+% %         if i == 100
+% %             x_bar2 = x_bar;
+% %             u_bar2 = u_bar;
+% %             x_lambda2 = x_lambda;
+% %             u_lambda2 = u_lambda;
+% %         end
+%         %====== proximal operator to minimize to cost
+%         [xnew, unew, ~] = iLQG2(DYNCST, DYNCST2, x0, unew, roll, x_bar2-x_lambda2,u_bar2-u_lambda2, Op);
+% 
+%     %     % Relaxtion
+%     %     xnew2 = alpha*xnew + (1-alpha)*x_bar;
+%     %     unew2 = alpha*unew + (1-alpha)*u_bar;
+% 
+%         %====== project operator to satisfy the constraint
+%         x_bar_old = x_bar;
+%         u_bar_old = u_bar;
+%         [x_bar, u_bar] = proj(xnew+x_lambda2, unew+u_lambda2, Op.lims);
+% 
+%         %====== dual variables update
+%         x_lambda_old = x_lambda;
+%         u_lambda_old = u_lambda;
+%         x_lambda = x_lambda2 + xnew - x_bar;
+%         u_lambda = u_lambda2 + unew - u_bar;
+% 
+%         %====== Weak convex ()
+%         ck_old = ck;
+%         ck = (1/roll)*norm(x_lambda-x_lambda2)^2 + (1/roll)*norm(u_lambda-u_lambda2)^2 + roll*norm(x_bar-x_bar2)^2 + roll*norm(u_bar-u_bar2)^2;
+% 
+%         if ck < yita * ck_old
+%             alphak_old = alphak;
+%             alphak_v(:,i+1) = (1+sqrt(1+4*alphak_v(:,i)^2))/2;
+%             x_bar2 = x_bar +1*((alphak_v(:,i)-1)/alphak_v(:,i+1))*(x_bar-x_bar_old);
+%             u_bar2 = u_bar +1*((alphak_v(:,i)-1)/alphak_v(:,i+1))*(u_bar-u_bar_old);
+%             x_lambda2 = x_lambda +1*((alphak_v(:,i)-1)/alphak_v(:,i+1))*(x_lambda-x_lambda_old);
+%             u_lambda2 = u_lambda +1*((alphak_v(:,i)-1)/alphak_v(:,i+1))*(u_lambda-u_lambda_old);
+%         else
+%             alphak_v(:,i+1) = 1;
+%             x_bar2 = x_bar_old;
+%             u_bar2 = u_bar_old;
+%             x_lambda2 = x_lambda_old;
+%             u_lambda2 = u_lambda_old;
+%             ck = (1/yita)*ck_old;
+%         end
     end
     %%
     % ====== residue ======= %
@@ -314,6 +445,8 @@ function [xnew,unew,cnew] = traj_sim(x0, u0, DYNCST, rhao,x_bar,c_bar,u_bar, the
         [xnew(:,i+1), cnew(:,i)]  = DYNCST(xnew(:,i), unew(:,i),rhao,x_bar(:,i),c_bar(:,i),u_bar(:,i), thetalist_bar(:,i), thetalistd_bar(:,i),i);
         xnew(:,i+1);
     end
+    
+    
     [~, cnew(:,N+1)] = DYNCST(xnew(:,N+1),nan(m,1),rhao,x_bar(:,N+1),c_bar(:,N+1),u_bar(:,N+1), thetalist_bar(:,N+1), thetalistd_bar(:,N+1),i);
 
 
@@ -325,11 +458,10 @@ function [x2, c2, u2] = proj(xnew, xnew_cen, unew, lims)
     u2 = zeros(m,N);
     x2 = xnew;
     c2 = xnew_cen;
-    mu = 0.4;
 
     for i =1:N
-        if ((xnew_cen(1, i + 1)) > mu * abs(xnew_cen(2, i + 1))) % mu = 0.4
-            c2(1, i + 1) = mu * abs(xnew_cen(2, i + 1));
+        if ((xnew_cen(1, i + 1)) > 0.4 * abs(xnew_cen(2, i + 1)))
+            c2(1, i + 1) = 0.4 * abs(xnew_cen(2, i + 1));
         end 
         for j = 1:n
 

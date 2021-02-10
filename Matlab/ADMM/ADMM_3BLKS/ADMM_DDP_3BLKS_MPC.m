@@ -1,6 +1,6 @@
-function [x, u, cost] = ADMM_DDP_3BLKS(DYNCST, x0, u0, Op)
+function [x, u, cost] = ADMM_DDP_3BLKS(DYNCST, x0, u0, Op, x_des, admmMaxIter, plot)
 %---------------------- user-adjustable parameters ------------------------
-global RC x_des 
+global RC 
 % --- initial sizes and controls
 n   = size(x0,1);          % dimension of state vector
 m   = size(u0, 1);          % dimension of control vector
@@ -8,12 +8,18 @@ N   = size(u0, 2);          % number of state transitions
 u   = u0;                   % initial control sequence
 
 
+if (nargin > 6)
+    isPlot = plot;
+else
+    isPlot = true;
+end
+
 % --- initialize trace data structure
 % trace = struct('iter',nan,'cost',nan,...
 %         'dcost',nan);
 % trace = repmat(trace,[min(Op.maxIter,1e6) 1]);
 % trace(1).iter = 1;
-iter = 5;
+iter = 10;
 
         
 % --- initial trajectory
@@ -40,7 +46,7 @@ last_head   = print_head;
 verbosity   = 1;
 
 if verbosity > 0
-    fprintf('\n =========== begin ADMM Three Block =========== \n');
+    fprintf('\n =========== begin ADMM Three Block MPC =========== \n');
 end
 
 %%%%%%% Initialize dual variebles
@@ -50,13 +56,8 @@ end
 % rhao(4): velocity consensus
 % rhao(5): position consensus
 
-% rhao   = [2, 1e-3, 1e-5, 0, 2];
-rhao   = Op.rhao;
+rhao   = [2, 1e-1, 1e-3, 0, 1];
 
-% alpha  = 1.5;
-% alphak = 1;
-% yita   = 0.999;
-admmMaxIter  = Op.admmMaxIter;
 
 %%%%%%% Primal variables
 % ddp primal
@@ -67,9 +68,9 @@ cnew = [c;x(end,:)]; % include both centrifugal and normal forces
 
 % ik primal
 % warm start by ik
-[x_ik_ws, xd_ik_ws, fk]  = kuka_second_order_IK(x_des(1:6,:), x0(1:7), x0(8:14), [0;0], zeros(7, size(x_des,2)), zeros(7, size(x_des,2)), 1);
+[x_ik_ws, xd_ik_ws, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), [0;0], zeros(7, size(x_des,2)), zeros(7, size(x_des,2)), false);
 thetalist = x_ik_ws; 
-thetalistd = 0*xd_ik_ws;
+thetalistd = xd_ik_ws;
 x0(8:14) = thetalistd(:,1);
 % projection
 u_bar = zeros(size(u));
@@ -119,26 +120,24 @@ for i = 1:admmMaxIter
         if i > 1
             Op.maxIter = 5;
         end
-%         if i == 1
-%             [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,1], x_bar-x_lambda,c_bar-c_lambda,u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
-%         else
+        
+
         [xnew, unew, ~] = iLQG_TRACK(DYNCST, x0, unew, [rhao(1:3),0,0], x_bar-x_lambda, c_bar-c_lambda, u_bar-u_lambda, thetalist-q_lambda, thetalistd-qd_lambda, Op);             
-%         end
         qnew            = xnew(1:7,:);
         qdnew           = xnew(8:14,:);
         
-        [xd_x, xd_y, xd_z] = convert_q2x(xnew);
+        [xd_x, xd_y, xd_z] = convert_q2x(xnew, false);
         [~, RC, ~] = curvature([xd_x, xd_y, xd_z]);
-        RC(1) = RC(2);
-        RC(end) = RC(end);
+        RC(1)         = RC(2);
+        RC(end)       = RC(end);
         RC(isnan(RC)) = 1000;
-        RC(1:5) = 1000;
+        RC(1:5)       = 1000;
         
         for j = 1:size(xnew, 2)
             J         = Jac_kuka(xnew(1:7, j)); % jacobian at the base of the manipulator
             x_dot     = J * xnew(8:14, j);
             cnew(1,j) = 0.3 * sum(x_dot(1:3).^2, 1) ./ RC(j);
-            cnew(2,j) = xnew(end,j); 
+            cnew(2,j) = xnew(17,j); 
         end
         
         % ====== ik block ====== %
@@ -146,7 +145,7 @@ for i = 1:admmMaxIter
         thetalist_old = thetalist;
         thetalistd_old = thetalistd;
         
-        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des(1:6,:), x0(1:7), x0(8:14), rhao(4:5), x_bar(1:7,:)-q_lambda, qdnew+qd_lambda, 1);
+        [thetalist, thetalistd, ~]  = kuka_second_order_IK(x_des, x0(1:7), x0(8:14), rhao(4:5), x_bar(1:7,:)-q_lambda, qdnew+qd_lambda, false);
         
         % ====== project operator to satisfy the constraint ======= %
         x_bar_old = x_bar;
@@ -166,9 +165,6 @@ for i = 1:admmMaxIter
         q_lambda = q_lambda + thetalist - x_bar;
         qd_lambda = qd_lambda + qdnew - thetalistd;
         
-
-    else    
-
     end
     %%
     % ====== residue ======= %
@@ -176,7 +172,10 @@ for i = 1:admmMaxIter
     res_x(:,i) = norm(qnew - x_bar);
     res_c(:,i) = norm(cnew - c_bar);
     res_q(:,i) = norm(thetalist - x_bar(1:7,:));
-%     res_q(:,i) = norm(xnew(1:7,:) - thetalist);
+    
+    fprintf('\n Constraint Residuals: state: %d, control: %d, contact: %d \n', res_x(:,i), res_u(:,i), res_c(:,i));
+    
+    %     res_q(:,i) = norm(xnew(1:7,:) - thetalist);
     res_qd(:,i) = norm(xnew(8:14,:) - thetalistd);
     res_q_consensus(:,i) = norm(thetalist - qnew);
     
@@ -203,56 +202,60 @@ for i = 1:admmMaxIter
 %     end
 end
 
-figure(15)
-ppp = 1:admmMaxIter+1;
-plot(ppp,alphak_v);
+if isPlot
+    figure(15)
+    ppp = 1:admmMaxIter+1;
+    plot(ppp,alphak_v);
 
-%% plot the residue
-figure(10)
-subplot(1,2,1)
-l = 1:admmMaxIter;
-plot(l,res_u,'DisplayName','residue u');
-hold on;
-plot(l,res_x,'DisplayName','residue x');
-plot(l,res_c,'DisplayName','residue c');
-plot(l,res_q,'DisplayName','residue q');
-plot(l,res_q_consensus,'DisplayName','residue q between ddp and ik');
-% plot(l,res_qd,'DisplayName','residue qd');
-% plot(l,res_ulambda,'DisplayName','residue ulambda');
-% plot(l,res_xlambda,'DisplayName','residue xlambda');
-% plot(l,res_clambda,'DisplayName','residue clambda');
-% plot(l,res_qlambda,'DisplayName','residue qlambda');
-% plot(l,res_qdlambda,'DisplayName','residue qdlambda');
-title('residue of primal and dual variebles for accelerated ADMM')
-xlabel('ADMM iteration')
-ylabel('residue')
-set(gca, 'YScale', 'log')
-set(gca, 'XScale', 'linear')
-legend
-hold off;
+    %% plot the residue
+    figure(10)
+    subplot(1,2,1)
+    l = 1:admmMaxIter;
+    plot(l,res_u,'DisplayName','residue u');
+    hold on;
+    plot(l,res_x,'DisplayName','residue x');
+    plot(l,res_c,'DisplayName','residue c');
+    plot(l,res_q,'DisplayName','residue q');
+    plot(l,res_q_consensus,'DisplayName','residue q between ddp and ik');
+    % plot(l,res_qd,'DisplayName','residue qd');
+    % plot(l,res_ulambda,'DisplayName','residue ulambda');
+    % plot(l,res_xlambda,'DisplayName','residue xlambda');
+    % plot(l,res_clambda,'DisplayName','residue clambda');
+    % plot(l,res_qlambda,'DisplayName','residue qlambda');
+    % plot(l,res_qdlambda,'DisplayName','residue qdlambda');
+    title('residue of primal and dual variebles for accelerated ADMM')
+    xlabel('ADMM iteration')
+    ylabel('residue')
+    set(gca, 'YScale', 'log')
+    set(gca, 'XScale', 'linear')
+    legend
+    hold off;
 
-subplot(1,2,2)
-jj = 1:admmMaxIter;
-plot(jj,costcomp);
-title('cost reduction for accelerated ADMM')
-xlabel('ADMM iteration')
-ylabel('cost')
+    subplot(1,2,2)
+    jj = 1:admmMaxIter;
+    plot(jj,costcomp);
+    title('cost reduction for accelerated ADMM')
+    xlabel('ADMM iteration')
+    ylabel('cost')
 
-figure(11)
-ii = 1:N;
-plot(ii,unew);
-hold on 
-plot(ii,u_bar);
+    figure(11)
+    ii = 1:N;
+    plot(ii,unew);
+    hold on 
+    plot(ii,u_bar);
 
-figure(12)
-e1 = (unew(1,:)-u_bar(1,:))./unew(1,:);
-e2 = (unew(2,:)-u_bar(2,:))./unew(2,:);
-plot(ii,e1);
-hold on 
-plot(ii,e2);
-hold off
+    figure(12)
+    e1 = (unew(1,:)-u_bar(1,:))./unew(1,:);
+    e2 = (unew(2,:)-u_bar(2,:))./unew(2,:);
+    plot(ii,e1);
+    hold on 
+    plot(ii,e2);
+    hold off
+end
 
 [~,~,costnew]  = traj_sim(x0,unew,DYNCST,zeros(1,5),x_init,c_init,u_init,zeros(7,N+1),zeros(7,N+1));
+
+
 
 %% ====== STEP 5: accept step (or not), expand or shrink trust region
 % print headings
@@ -274,6 +277,8 @@ end
 u              = unew;
 x              = xnew;
 cost           = costnew;
+save('test_data/consensus_admm_dyn_time.mat','x','u','costcomp','res_x','res_u','res_c','res_q')
+
 % Op.plotFn(x);
    
     % update trace
@@ -314,6 +319,8 @@ function [xnew,unew,cnew] = traj_sim(x0, u0, DYNCST, rhao,x_bar,c_bar,u_bar, the
         [xnew(:,i+1), cnew(:,i)]  = DYNCST(xnew(:,i), unew(:,i),rhao,x_bar(:,i),c_bar(:,i),u_bar(:,i), thetalist_bar(:,i), thetalistd_bar(:,i),i);
         xnew(:,i+1);
     end
+    
+    
     [~, cnew(:,N+1)] = DYNCST(xnew(:,N+1),nan(m,1),rhao,x_bar(:,N+1),c_bar(:,N+1),u_bar(:,N+1), thetalist_bar(:,N+1), thetalistd_bar(:,N+1),i);
 
 
@@ -325,11 +332,10 @@ function [x2, c2, u2] = proj(xnew, xnew_cen, unew, lims)
     u2 = zeros(m,N);
     x2 = xnew;
     c2 = xnew_cen;
-    mu = 0.4;
 
     for i =1:N
-        if ((xnew_cen(1, i + 1)) > mu * abs(xnew_cen(2, i + 1))) % mu = 0.4
-            c2(1, i + 1) = mu * abs(xnew_cen(2, i + 1));
+        if ((xnew_cen(1, i + 1)) > 0.7 * abs(xnew_cen(2, i + 1)))
+            c2(1, i + 1) = 0.7 * abs(xnew_cen(2, i + 1));
         end 
         for j = 1:n
 
